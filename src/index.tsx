@@ -1,8 +1,7 @@
 import { render } from 'preact';
+import { signal } from '@preact/signals';
+import { App } from './App';
+
 import './style.css';
 
-export function App() {
-    return <div class={'bg-red-600'}></div>;
-}
-
-render(<App />, document.getElementById('app'));
+render(<App />, document.getElementById('app') ?? document.createElement('div'));
