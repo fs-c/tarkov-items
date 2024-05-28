@@ -14,7 +14,7 @@ export interface ItemMetadata {
     }[];
 }
 
-export const getItemMetadata = async (): Promise<Map<ItemMetadata['id'], ItemMetadata>> => {
+export const getItemsMetadata = async (): Promise<Map<ItemMetadata['id'], ItemMetadata>> => {
     const response = await fetch('https://api.tarkov.dev/graphql', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -42,4 +42,4 @@ export const getItemMetadata = async (): Promise<Map<ItemMetadata['id'], ItemMet
     return new Map(data.items.map((item: ItemMetadata) => [item.id, item]));
 };
 
-export const itemMetadata = signal<Map<ItemMetadata['id'], ItemMetadata> | null>(null);
+export const itemsMetadata = signal<Map<ItemMetadata['id'], ItemMetadata> | null>(null);

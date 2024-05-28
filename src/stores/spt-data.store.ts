@@ -55,10 +55,7 @@ const isRawContainers = (data: unknown): data is RawContainers => {
                 Array.isArray(container['template']['Items']) &&
                 container['template']['Items'].every((item) => {
                     return (
-                        typeof item === 'object' &&
-                        item !== null &&
-                        '_tpl' in item &&
-                        typeof item['_tpl'] === 'string'
+                        typeof item === 'object' && item !== null && '_tpl' in item && typeof item['_tpl'] === 'string'
                     );
                 })
             );
@@ -117,12 +114,9 @@ const getLastUpdated = (): Date => {
 
 export const lastUpdated = signal(getLastUpdated());
 
-const getAverageContainersForMap = async (
-    map: Location,
-): Promise<ReadonlySignal<Map<string, number>>> => {
+const getAverageContainersForMap = async (map: Location): Promise<ReadonlySignal<Map<string, number>>> => {
     try {
-        const rawContainersForMap = (await import(`../database/${map}/staticContainers.json`))
-            .default;
+        const rawContainersForMap = (await import(`../database/${map}/staticContainers.json`)).default;
 
         if (!isRawContainers(rawContainersForMap)) {
             console.error(rawContainersForMap);
@@ -131,7 +125,7 @@ const getAverageContainersForMap = async (
 
         return computed(() =>
             rawContainersForMap.staticContainers.reduce((containerCounts, currentContainer) => {
-                // reduce id to name here because there are multiple containers
+                // reduce id to name early here because there are multiple containers
                 // with the same name but different ids (in particular noticeable
                 // with various weapon crates) which we want to group together
                 const containerName =
@@ -145,14 +139,11 @@ const getAverageContainersForMap = async (
         );
     } catch (err: unknown) {
         console.error(`failed importing raw container json for ${map}:`, err);
-    } finally {
         return signal(new Map());
     }
 };
 
-const getAverageContainersPerMap = async (): Promise<
-    ReadonlySignal<Map<Location, Map<string, number>>>
-> => {
+const getAverageContainersPerMap = async (): Promise<ReadonlySignal<Map<Location, Map<string, number>>>> => {
     const averageContainersPerMapSignal = new Map<Location, ReadonlySignal<Map<string, number>>>();
 
     for (const location of Object.values(Location)) {
@@ -186,7 +177,7 @@ const normalizeProbabilities = <T extends { relativeProbability: number }>(
 };
 
 const getAverageItemsPerContainerPerMap = async (): Promise<
-    ReadonlySignal<Map<Location, Map<string, number>>>
+    ReadonlySignal<Map<Location, Map<string, Map<string, number>>>>
 > => {
     const rawLootPerMap = new Map<Location, RawLoot>();
 
@@ -206,26 +197,29 @@ const getAverageItemsPerContainerPerMap = async (): Promise<
     }
 
     return computed(() => {
-        const averageItemsPerContainerPerMap = new Map<Location, Map<string, number>>();
+        const averageItemsPerContainerPerMap = new Map<Location, Map<string, Map<string, number>>>();
 
-        for (const [location, rawLoot] of rawLootPerMap) {
-            const averageItemsPerContainer = new Map<string, number>();
+        for (const [map, rawLoot] of rawLootPerMap) {
+            const averageItemsPerContainer = new Map<string, Map<string, number>>();
 
-            for (const rawContainer of Object.values(rawLoot)) {
-                const normalizeItemDistribution = normalizeProbabilities(
-                    rawContainer.itemDistribution,
+            for (const [containerId, containerLoot] of Object.entries(rawLoot)) {
+                const averageItemCount = normalizeProbabilities(containerLoot.itemcountDistribution).reduce(
+                    (averageCount, current) => (averageCount += current.count * current.probability),
+                    0,
                 );
 
-                for (const item of normalizeItemDistribution) {
-                    const itemName = translations.value.get(item.tpl) ?? item.tpl;
-                    averageItemsPerContainer.set(
-                        itemName,
-                        (averageItemsPerContainer.get(itemName) ?? 0) + item.probability,
-                    );
-                }
+                const normalizedItemProbabilities = normalizeProbabilities(containerLoot.itemDistribution);
+
+                // see above for early name conversion reasoning
+                const containerName = translations.value.get(containerId) ?? containerId;
+                averageItemsPerContainer.set(
+                    containerName,
+                    // don't translate id here, we need it later to get the correct metadata
+                    new Map(normalizedItemProbabilities.map((item) => [item.tpl, item.probability * averageItemCount])),
+                );
             }
 
-            averageItemsPerContainerPerMap.set(location, averageItemsPerContainer);
+            averageItemsPerContainerPerMap.set(map, averageItemsPerContainer);
         }
 
         return averageItemsPerContainerPerMap;
