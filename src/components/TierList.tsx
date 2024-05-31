@@ -3,6 +3,12 @@ import { Location } from '../model/loot-data';
 import { allItemMetadata, averageSpawnsPerMap } from '../store/state';
 import { ItemMetadata } from '../model/item-metadata';
 
+interface FrontendItemData extends ItemMetadata {
+    pricePerSlot: number;
+    averageCount: number;
+    medianPrice: number;
+}
+
 const tierMetadata = [
     { name: 'Common', color: 'gray' },
     { name: 'Uncommon', color: 'green' },
@@ -15,7 +21,7 @@ export function TierList() {
     const selectedMaps = useSignal(Object.values(Location));
     const minPricePerSlot = useSignal(1000);
 
-    const tierPercentiles = useSignal([0.4, 0.7, 0.85, 0.95, 1]);
+    const tierPercentiles = useSignal([0.875, 0.95, 0.975, 0.985, 1]);
     const itemsPerTier = useSignal(20);
 
     const averageSpawns = useComputed(() => {
@@ -27,8 +33,6 @@ export function TierList() {
                 continue;
             }
 
-            console.log(`setting average spawns for ${map}`, averageSpawnsForMap);
-
             for (const [item, count] of averageSpawnsForMap) {
                 averageSpawns.set(item, (averageSpawns.get(item) ?? 0) + count);
             }
@@ -38,7 +42,7 @@ export function TierList() {
     });
 
     const averageSpawnsWithMetadata = useComputed(() => {
-        const averageSpawnsWithMetadata: { averageCount: number; metadata: ItemMetadata }[] = [];
+        const averageSpawnsWithMetadata: FrontendItemData[] = [];
 
         for (const [item, averageCount] of averageSpawns.value) {
             const metadata = allItemMetadata.value.get(item);
@@ -46,7 +50,18 @@ export function TierList() {
                 continue;
             }
 
-            averageSpawnsWithMetadata.push({ averageCount, metadata });
+            const medianPrice = metadata.historicalPrices.map((price) => price.price).sort()[
+                Math.floor(metadata.historicalPrices.length / 2)
+            ];
+
+            const itemData: FrontendItemData = {
+                ...metadata,
+                averageCount,
+                medianPrice,
+                pricePerSlot: Math.round(medianPrice / (metadata.width * metadata.height)),
+            };
+
+            averageSpawnsWithMetadata.push(itemData);
         }
 
         return averageSpawnsWithMetadata;
@@ -54,22 +69,33 @@ export function TierList() {
 
     const tiers = useComputed(() => {
         const filteredItems = averageSpawnsWithMetadata.value.filter(
-            (item) => item.metadata.lastLowPrice >= minPricePerSlot.value,
+            (item) => item.pricePerSlot >= minPricePerSlot.value,
         );
-        const itemsSortedBySpawnrate = filteredItems.sort((a, b) => a.averageCount - b.averageCount);
+        const spawnrates = filteredItems.map((item) => item.averageCount);
+        const spawnRatesMax = Math.max(...spawnrates);
+        const spawnRatesMin = Math.min(...spawnrates);
 
-        console.log({ itemsSortedBySpawnrate });
-
-        const tiers = tierPercentiles.value.map((percentile, index) =>
-            itemsSortedBySpawnrate.slice(
-                Math.floor((tierPercentiles.value[index - 1] ?? 0) * itemsSortedBySpawnrate.length),
-                Math.ceil(percentile * itemsSortedBySpawnrate.length),
-            ),
+        const tierBoundaries = tierPercentiles.value.map(
+            (percentile) => spawnRatesMax - (spawnRatesMax - spawnRatesMin) * percentile,
         );
 
-        return tiers.map((tier) =>
-            tier.sort((a, b) => b.metadata.lastLowPrice - a.metadata.lastLowPrice).slice(0, itemsPerTier.value),
-        );
+        const itemsSortedBySpawnrate = filteredItems.sort((a, b) => b.averageCount - a.averageCount);
+
+        return itemsSortedBySpawnrate
+            .reduce(
+                (tiers, item) => {
+                    const tierIndex = tierBoundaries.findIndex((boundary) => item.averageCount >= boundary);
+                    if (tierIndex === -1) {
+                        return tiers;
+                    }
+
+                    tiers[tierIndex].push(item);
+
+                    return tiers;
+                },
+                tierBoundaries.map(() => [] as FrontendItemData[]),
+            )
+            .map((tier) => tier.sort((a, b) => b.pricePerSlot - a.pricePerSlot).slice(0, itemsPerTier.value));
     });
 
     return (
@@ -79,15 +105,13 @@ export function TierList() {
                     <h2 className={'text-3xl font-bold text-white'}>{tierMetadata[index].name}</h2>
                     <div className={'grid grid-cols-3 gap-8'}>
                         {tier.map((item) => (
-                            <div key={item.metadata.id} className={'flex flex-col gap-2 p-4 bg-gray-900 rounded-lg'}>
-                                <img
-                                    src={item.metadata.iconLink}
-                                    alt={item.metadata.shortName}
-                                    className={'w-32 h-32 object-cover'}
-                                />
+                            <div key={item.id} className={'flex flex-col gap-2 p-4 bg-gray-900 rounded-lg'}>
+                                <img src={item.iconLink} alt={item.shortName} className={'w-32 h-32 object-cover'} />
                                 <div className={'flex flex-col gap-2'}>
-                                    <span className={'text-white'}>{item.metadata.shortName}</span>
-                                    <span className={'text-white'}>{item.metadata.lastLowPrice}</span>
+                                    <span className={'text-white'}>{item.shortName}</span>
+                                    <span className={'text-white'}>
+                                        {item.pricePerSlot} ({item.averageCount})
+                                    </span>
                                 </div>
                             </div>
                         ))}
