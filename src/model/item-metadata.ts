@@ -1,10 +1,38 @@
+export enum ItemType {
+    ammo = 'ammo',
+    ammoBox = 'ammoBox',
+    any = 'any',
+    armor = 'armor',
+    armorPlate = 'armorPlate',
+    backpack = 'backpack',
+    barter = 'barter',
+    container = 'container',
+    glasses = 'glasses',
+    grenade = 'grenade',
+    gun = 'gun',
+    headphones = 'headphones',
+    helmet = 'helmet',
+    injectors = 'injectors',
+    keys = 'keys',
+    markedOnly = 'markedOnly',
+    meds = 'meds',
+    mods = 'mods',
+    noFlea = 'noFlea',
+    pistolGrip = 'pistolGrip',
+    preset = 'preset',
+    provisions = 'provisions',
+    rig = 'rig',
+    suppressor = 'suppressor',
+    wearable = 'wearable',
+}
+
 export interface ItemMetadata {
     id: string;
     shortName: string;
     iconLink: string;
     width: number;
     height: number;
-    types: string[];
+    types: ItemType[];
     lastLowPrice: number;
     historicalPrices: {
         price: number;
