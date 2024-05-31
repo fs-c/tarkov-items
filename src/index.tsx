@@ -1,5 +1,4 @@
 import { render } from 'preact';
-import { signal } from '@preact/signals';
 import { App } from './App';
 
 import './style.css';
