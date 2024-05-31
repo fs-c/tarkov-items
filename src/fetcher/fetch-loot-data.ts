@@ -7,8 +7,13 @@ import {
     isContainerContent,
 } from '../model/loot-data';
 
+/**
+ * Paths in this file are RELATIVE TO THE CURRENT PAGE. This is a quick workaround
+ * to make github pages work.
+ */
+
 export async function fetchTranslations(): Promise<Translations> {
-    const response = await fetch('/database/translations.json');
+    const response = await fetch('./database/translations.json');
     const rawTranslations = await (response.json() as Promise<Record<string, string>>);
 
     const translations = new Map<string, string>();
@@ -28,7 +33,7 @@ export async function fetchStaticSpawnsPerMap(): Promise<Map<Location, StaticSpa
     const staticSpawnsPerMap = new Map<Location, StaticSpawns>();
 
     for (const location of Object.values(Location)) {
-        const response = await fetch(`/database/${location}/staticContainers.json`);
+        const response = await fetch(`./database/${location}/staticContainers.json`);
         const data = await (response.json() as Promise<unknown>);
 
         if (!isStaticSpawnms(data)) {
@@ -45,7 +50,7 @@ export async function fetchContainerContentPerMap(): Promise<Map<Location, Conta
     const containerContentPerMap = new Map<Location, ContainerContent>();
 
     for (const location of Object.values(Location)) {
-        const response = await fetch(`/database/${location}/staticLoot.json`);
+        const response = await fetch(`./database/${location}/staticLoot.json`);
         const data = await (response.json() as Promise<unknown>);
 
         if (!isContainerContent(data)) {
