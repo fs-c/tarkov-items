@@ -36,15 +36,18 @@ function getAverageItemsPerContainer(
 
     for (const [containerId, content] of Object.entries(containerContent)) {
         const averageItems = new Map<string, number>();
-        const averageItemCount = normalizeProbabilities(content.itemcountDistribution).reduce(
-            (averageCount, current) => (averageCount += current.count * current.probability),
-            0,
-        );
+
+        // todo: not sure if this is needed, but since the raw item distribution is not normalized and
+        // just counts the absolute observed occurences it doesn't seem like it
+        // const averageItemCount = normalizeProbabilities(content.itemcountDistribution).reduce(
+        //     (averageCount, current) => (averageCount += current.count * current.probability),
+        //     0,
+        // );
 
         const normalizedItemDistribution = normalizeProbabilities(content.itemDistribution);
 
         for (const item of normalizedItemDistribution) {
-            averageItems.set(item.tpl, item.probability * averageItemCount);
+            averageItems.set(item.tpl, item.probability);
         }
 
         // need to resolve to name here since we also do it for container count
@@ -71,8 +74,6 @@ export function mapLootDataToAverageSpawnsPerMap(
         }
 
         const averageContainers = getAverageContainers(staticSpawns, translations);
-        console.log({ map, averageContainers: [...averageContainers.entries()].sort((a, b) => a[1] - b[1]) });
-
         const averageItemsPerContainer = getAverageItemsPerContainer(containerContent, translations);
 
         const averageSpawns = new Map<string, number>();
