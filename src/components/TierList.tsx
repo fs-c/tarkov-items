@@ -4,7 +4,7 @@ import { allItemMetadata, averageSpawnsPerMap } from '../store/state';
 import { ItemMetadata, ItemType } from '../model/item-metadata';
 import { twMerge as tw } from 'tailwind-merge';
 import { useLayoutEffect, useRef } from 'preact/hooks';
-import { randomNumberBetween } from '../util';
+import { formatBigNumber, randomNumberBetween } from '../util';
 
 interface FrontendItemData extends ItemMetadata {
     pricePerSlot: number;
@@ -31,7 +31,7 @@ export function TierList() {
 
     const tierMetadata = useSignal<TierMetadata[]>([
         { name: 'Common', color: 'bg-gray-700', rgbColor: '#374151', percentile: 0.85 },
-        { name: 'Uncommon', color: 'bg-emerald-700', rgbColor: '#047857', percentile: 0.95 },
+        { name: 'Uncommon', color: 'bg-emerald-600', rgbColor: '#047857', percentile: 0.95 },
         { name: 'Rare', color: 'bg-sky-700', rgbColor: '#0369a1', percentile: 0.975 },
         { name: 'Epic', color: 'bg-fuchsia-700', rgbColor: '#a21caf', percentile: 0.985 },
         { name: 'Legendary', color: 'bg-yellow-600', rgbColor: '#a16207', percentile: 1 },
@@ -208,7 +208,7 @@ function Tier({
                                       'absolute bottom-0 right-0 mx-2 my-1 rounded-md px-2 py-1 font-mono leading-none text-gray-300 backdrop-blur'
                                   }
                               >
-                                  {Math.round(item.pricePerSlot / 1000)}k
+                                  {formatBigNumber(item.pricePerSlot)}₽
                               </span>
 
                               <span
