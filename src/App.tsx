@@ -3,7 +3,7 @@ import { fetchContainerContentPerMap, fetchStaticSpawnsPerMap, fetchTranslations
 import { allItemMetadata, averageSpawnsPerMap, translations } from './store/state';
 import { mapLootDataToAverageSpawnsPerMap } from './mapper/loot-data-to-rarity';
 import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
-import { TierList } from './components/TierList';
+import { RarityVisualization } from './components/RarityVisualization';
 
 export function App() {
     useMemo(() => {
@@ -30,8 +30,8 @@ export function App() {
     }, []);
 
     return (
-        <div className={'bg-gray-950 min-h-[100vh]'}>
-            <TierList />
+        <div className={'h-screen w-screen'}>
+            <RarityVisualization />
         </div>
     );
 }

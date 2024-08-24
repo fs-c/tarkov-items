@@ -37,13 +37,6 @@ function getAverageItemsPerContainer(
     for (const [containerId, content] of Object.entries(containerContent)) {
         const averageItems = new Map<string, number>();
 
-        // todo: not sure if this is needed, but since the raw item distribution is not normalized and
-        // just counts the absolute observed occurences it doesn't seem like it
-        // const averageItemCount = normalizeProbabilities(content.itemcountDistribution).reduce(
-        //     (averageCount, current) => (averageCount += current.count * current.probability),
-        //     0,
-        // );
-
         const normalizedItemDistribution = normalizeProbabilities(content.itemDistribution);
 
         for (const item of normalizedItemDistribution) {

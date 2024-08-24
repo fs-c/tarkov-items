@@ -72,8 +72,6 @@ export function TierList() {
             averageSpawnsWithMetadata.push(itemData);
         }
 
-        console.log(averageSpawnsWithMetadata);
-
         return averageSpawnsWithMetadata;
     });
 
@@ -129,7 +127,7 @@ function Tier({
     className?: string;
 }) {
     const numberOfItemsToShow = useSignal(40);
-    const itemsToShow = items.slice(0, numberOfItemsToShow.value);
+    const itemsToShow = useComputed(() => items.slice(0, numberOfItemsToShow.value));
 
     const canvasContainer = useRef<HTMLDivElement>(null);
     const canvas = useRef<HTMLCanvasElement>(null);
@@ -197,11 +195,11 @@ function Tier({
             </div>
 
             <div className={'z-10 flex flex-row flex-wrap gap-4 px-4 xl:w-full xl:max-w-screen-lg xl:px-8'}>
-                {itemsToShow.length === 0
+                {itemsToShow.value.length === 0
                     ? [...Array<unknown>(numberOfItemsToShow.value)].map((_, index) => (
                           <div key={index} className={'h-16 w-16 animate-pulse bg-gray-700'}></div>
                       ))
-                    : itemsToShow.map((item) => (
+                    : itemsToShow.value.map((item) => (
                           <div className={'group relative h-20 w-20'}>
                               <span
                                   className={

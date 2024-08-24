@@ -17,4 +17,9 @@ export default tseslint.config(
             },
         },
     },
+    {
+        rules: {
+            '@typescript-eslint/restrict-template-expressions': 'off',
+        },
+    },
 );
