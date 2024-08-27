@@ -1,6 +1,6 @@
 import { useComputed, useSignal } from '@preact/signals';
 import { Location } from '../model/loot-data';
-import { allItemMetadata, averageSpawnsPerMap } from '../store/state';
+import { allItemMetadata, averageSpawnsPerMap } from '../store/loot-data';
 import { ItemMetadata, ItemType } from '../model/item-metadata';
 import { twMerge as tw } from 'tailwind-merge';
 import { useLayoutEffect, useRef } from 'preact/hooks';

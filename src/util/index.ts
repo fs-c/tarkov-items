@@ -11,3 +11,16 @@ export function formatBigNumber(number: number): string {
         return Math.round(number / 1000000).toString() + 'm';
     }
 }
+
+export function normalizeProbabilities<T extends { relativeProbability: number }>(
+    objectsWithRelativeProbabilities: T[],
+): (Omit<T, 'relativeProbability'> & { probability: number })[] {
+    const relativeProbabilitiesSum = objectsWithRelativeProbabilities.reduce(
+        (acc, cur) => (acc += cur.relativeProbability),
+        0,
+    );
+    return objectsWithRelativeProbabilities.map((item) => ({
+        ...item,
+        probability: item.relativeProbability / relativeProbabilitiesSum,
+    }));
+}

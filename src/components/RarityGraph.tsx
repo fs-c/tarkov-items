@@ -1,7 +1,7 @@
 import { useComputed, useSignal, Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import * as d3 from 'd3';
-import { averageSpawnsPerMap, allItemMetadata } from '../store/state';
+import { averageSpawnsPerMap, allItemMetadata } from '../store/loot-data';
 import { Location } from '../model/loot-data';
 import { ItemMetadata, ItemType } from '../model/item-metadata';
 

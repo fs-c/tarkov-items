@@ -1,7 +1,6 @@
 import { useMemo } from 'preact/hooks';
 import { fetchContainerContentPerMap, fetchStaticSpawnsPerMap, fetchTranslations } from './fetcher/fetch-loot-data';
-import { allItemMetadata, averageSpawnsPerMap, translations } from './store/state';
-import { mapLootDataToAverageSpawnsPerMap } from './mapper/loot-data-to-rarity';
+import { translations, staticSpawnsPerMap, containerContentPerMap, allItemMetadata } from './store/loot-data';
 import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
 import { RarityVisualization } from './components/RarityVisualization';
 
@@ -15,13 +14,8 @@ export function App() {
         ])
             .then(([translationsValue, staticSpawnsPerMapValue, containerContentPerMapValue, allItemMetadataValue]) => {
                 translations.value = translationsValue;
-
-                averageSpawnsPerMap.value = mapLootDataToAverageSpawnsPerMap(
-                    staticSpawnsPerMapValue,
-                    containerContentPerMapValue,
-                    translationsValue,
-                );
-
+                staticSpawnsPerMap.value = staticSpawnsPerMapValue;
+                containerContentPerMap.value = containerContentPerMapValue;
                 allItemMetadata.value = allItemMetadataValue;
             })
             .catch((err: unknown) => {
