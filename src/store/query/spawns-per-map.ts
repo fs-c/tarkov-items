@@ -3,7 +3,7 @@ import { staticSpawnsPerMap, containerContentPerMap, translations } from '../loo
 import { Location } from '../../model/loot-data';
 import { normalizeProbabilities } from '../../util';
 
-const averageContainersPerMap = computed(() => {
+export const averageContainersPerMap = computed(() => {
     const averageContainersPerMap = new Map<Location, Map<string, number>>();
 
     for (const map of Object.values(Location)) {
@@ -11,7 +11,6 @@ const averageContainersPerMap = computed(() => {
 
         const staticContainers = staticSpawnsPerMap.value.get(map)?.staticContainers;
         if (!staticContainers) {
-            console.warn(`missing staticContainers for ${map}`);
             continue;
         }
 
@@ -30,7 +29,7 @@ const averageContainersPerMap = computed(() => {
     return averageContainersPerMap;
 });
 
-const averageItemsPerContainerPerMap = computed(() => {
+export const averageItemsPerContainerPerMap = computed(() => {
     const averageItemsPerContainerPerMap = new Map<Location, Map<string, Map<string, number>>>();
 
     for (const map of Object.values(Location)) {
@@ -38,7 +37,6 @@ const averageItemsPerContainerPerMap = computed(() => {
 
         const containerContent = containerContentPerMap.value.get(map);
         if (!containerContent) {
-            console.warn(`missing containerContent for ${map}`);
             continue;
         }
 
@@ -60,36 +58,4 @@ const averageItemsPerContainerPerMap = computed(() => {
     }
 
     return averageItemsPerContainerPerMap;
-});
-
-export const averageSpawnsPerMap = computed(() => {
-    const averageSpawnsPerMap = new Map<Location, Map<string, number>>();
-
-    for (const map of Object.values(Location)) {
-        const averageContainers = averageContainersPerMap.value.get(map);
-        const averageItemsPerContainer = averageItemsPerContainerPerMap.value.get(map);
-
-        if (!averageContainers || !averageItemsPerContainer) {
-            console.warn(`missing data for ${map}`, { averageContainers, averageItemsPerContainer });
-            continue;
-        }
-
-        const averageSpawns = new Map<string, number>();
-
-        for (const [container, averageContainerCount] of averageContainers) {
-            const items = averageItemsPerContainer.get(container);
-            if (!items) {
-                console.warn(`missing items for ${container}`);
-                continue;
-            }
-
-            for (const [item, averageItemCount] of items) {
-                averageSpawns.set(item, (averageSpawns.get(item) ?? 0) + averageItemCount * averageContainerCount);
-            }
-        }
-
-        averageSpawnsPerMap.set(map, averageSpawns);
-    }
-
-    return averageSpawnsPerMap;
 });

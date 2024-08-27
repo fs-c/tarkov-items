@@ -1,9 +1,10 @@
 import { useComputed, useSignal, Signal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import * as d3 from 'd3';
-import { averageSpawnsPerMap, allItemMetadata } from '../store/loot-data';
+import { allItemMetadata } from '../store/loot-data';
 import { Location } from '../model/loot-data';
 import { ItemMetadata, ItemType } from '../model/item-metadata';
+import { averageItemsPerContainerPerMap, averageContainersPerMap } from '../store/query/spawns-per-map';
 
 interface FrontendItemData extends ItemMetadata {
     pricePerSlot: number;
@@ -53,10 +54,14 @@ const Axis = ({
 export function RarityGraph({
     minimumPricePerSlot,
     itemTypes,
+    maps,
+    containers,
     selectedItemId,
 }: {
     minimumPricePerSlot: Signal<number>;
     itemTypes: Signal<ItemType[]>;
+    maps: Signal<Location[]>;
+    containers: Signal<string[]>;
     selectedItemId: Signal<string | undefined>;
 }) {
     const svgRef = useRef<SVGSVGElement>(null);
@@ -85,17 +90,41 @@ export function RarityGraph({
         };
     }, [wrapperRef.current]);
 
-    const averageSpawnsWithMetadata = useComputed(() => {
-        console.log(minimumPricePerSlot.value);
+    // this already considers the selected containers and maps
+    const averageSpawnsPerItem = useComputed(() => {
+        const averageSpawnsPerItem = new Map<string, number>();
+    
+        for (const map of maps.value) {
+            const averageContainers = averageContainersPerMap.value.get(map);
+            const averageItemsPerContainer = averageItemsPerContainerPerMap.value.get(map);
+    
+            if (!averageContainers || !averageItemsPerContainer) {
+                continue;
+            }
+        
+            for (const [container, averageContainerCount] of averageContainers) {
+                if (!containers.value.includes(container)) {
+                    continue;
+                }
 
-        const averageSpawns = averageSpawnsPerMap.value.get(Location.Streets); // todo
-        if (averageSpawns == null) {
-            return [];
+                const items = averageItemsPerContainer.get(container);
+                if (!items) {
+                    continue;
+                }
+    
+                for (const [item, averageItemCount] of items) {
+                    averageSpawnsPerItem.set(item, (averageSpawnsPerItem.get(item) ?? 0) + averageItemCount * averageContainerCount);
+                }
+            }
         }
+    
+        return averageSpawnsPerItem;
+    });
 
+    const averageSpawnsWithMetadata = useComputed(() => {
         const averageSpawnsWithMetadata = [];
 
-        for (const [item, averageCount] of averageSpawns) {
+        for (const [item, averageCount] of averageSpawnsPerItem.value) {
             const metadata = allItemMetadata.value.get(item);
             if (!metadata) {
                 continue;

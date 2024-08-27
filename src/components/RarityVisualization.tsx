@@ -1,18 +1,68 @@
 import { RarityGraph } from './RarityGraph';
-import { useSignal } from '@preact/signals';
+import { Signal, useComputed, useSignal } from '@preact/signals';
 import { ItemType } from '../model/item-metadata';
 import { InputNumber } from './lib/Input';
 import { ItemDetail } from './ItemDetail';
+import { Location } from '../model/loot-data';
+import { averageContainersPerMap } from '../store/query/spawns-per-map';
+
+function CheckboxGroup({ label, allPossibleItems, selectedItems }: { label: string, allPossibleItems: string[]; selectedItems: Signal<string[]> }) {
+    const shouldSelectAll = useComputed(() => selectedItems.value.length !== allPossibleItems.length);
+    
+    const onSelectAllButtonClick = () => {
+        if (shouldSelectAll.value) {
+            selectedItems.value = allPossibleItems;
+        } else {
+            selectedItems.value = [];
+        }
+    };
+
+    const onItemCheckboxChange = (item: string) => {
+        if (selectedItems.value.includes(item)) {
+            selectedItems.value = selectedItems.value.filter((i) => i !== item);
+        } else {
+            selectedItems.value = [...selectedItems.value, item];
+        }
+    };
+
+    return (
+        <div className={'flex flex-col gap-2'}>
+            <h3 className={'font-bold'}>
+                {label}
+                <button className={'pl-4 font-normal text-sm text-gray-400 underline'} onClick={onSelectAllButtonClick}>
+                    {shouldSelectAll.value ? 'Select all' : 'Deselect all'}
+                </button>
+            </h3>
+
+            <div className={'flex flex-row gap-2 flex-wrap'}>
+                {allPossibleItems.map((item) => (
+                    <div className={'flex flex-row gap-1 items-center'}>
+                        <input id={'checkbox-' + item} type={'checkbox'} checked={selectedItems.value.includes(item)} onChange={() => {onItemCheckboxChange(item)}} />
+                        <label for={'checkbox-' + item}>{item}</label>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
 
 export function RarityVisualization() {
+    const allMaps = Object.values(Location);
+    const allItemTypes = Object.values(ItemType);
+
     const minimumPricePerSlot = useSignal(10000);
-    const itemTypes = useSignal<ItemType[]>(Object.values(ItemType));
+
+    const maps = useSignal<Location[]>(allMaps);
+    const itemTypes = useSignal<ItemType[]>(allItemTypes);
+    
+    const possibleContainers = useComputed(() => maps.value.flatMap((map) => Array.from(averageContainersPerMap.value.get(map)?.keys() ?? [])));
+    const containers = useSignal<string[]>(possibleContainers.value);
 
     const selectedItemId = useSignal<string | undefined>(undefined);
 
     return (
         <div className={'flex h-screen w-screen flex-col gap-4 bg-gray-800 p-4'}>
-            <div>
+            <div className={'w-fit'}>
                 <InputNumber
                     label={'Minimum price per slot'}
                     value={minimumPricePerSlot.value}
@@ -20,11 +70,19 @@ export function RarityVisualization() {
                 />
             </div>
 
+            <CheckboxGroup label={'Maps'} allPossibleItems={allMaps} selectedItems={maps} />
+
+            <CheckboxGroup label={'Item Types'} allPossibleItems={allItemTypes} selectedItems={itemTypes} />
+
+            {/* <CheckboxGroup label={'Containers'} allPossibleItems={possibleContainers.value} selectedItems={containers} /> */}
+
             <div class={'relative flex flex-grow'}>
                 <div class={'flex-grow overflow-hidden rounded-xl'}>
                     <RarityGraph
                         minimumPricePerSlot={minimumPricePerSlot}
                         itemTypes={itemTypes}
+                        maps={maps}
+                        containers={possibleContainers}
                         selectedItemId={selectedItemId}
                     />
                 </div>
