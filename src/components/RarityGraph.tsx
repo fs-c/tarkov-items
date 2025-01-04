@@ -4,7 +4,10 @@ import * as d3 from 'd3';
 import { allItemMetadata } from '../store/loot-data';
 import { Location } from '../model/loot-data';
 import { ItemMetadata, ItemType } from '../model/item-metadata';
-import { averageItemsPerContainerPerMap, averageContainersPerMap } from '../store/query/spawns-per-map';
+import {
+    averageItemsPerContainerPerMap,
+    averageContainersPerMap,
+} from '../store/query/spawns-per-map';
 
 interface FrontendItemData extends ItemMetadata {
     pricePerSlot: number;
@@ -93,15 +96,15 @@ export function RarityGraph({
     // this already considers the selected containers and maps
     const averageSpawnsPerItem = useComputed(() => {
         const averageSpawnsPerItem = new Map<string, number>();
-    
+
         for (const map of maps.value) {
             const averageContainers = averageContainersPerMap.value.get(map);
             const averageItemsPerContainer = averageItemsPerContainerPerMap.value.get(map);
-    
+
             if (!averageContainers || !averageItemsPerContainer) {
                 continue;
             }
-        
+
             for (const [container, averageContainerCount] of averageContainers) {
                 if (!containers.value.includes(container)) {
                     continue;
@@ -111,13 +114,17 @@ export function RarityGraph({
                 if (!items) {
                     continue;
                 }
-    
+
                 for (const [item, averageItemCount] of items) {
-                    averageSpawnsPerItem.set(item, (averageSpawnsPerItem.get(item) ?? 0) + averageItemCount * averageContainerCount);
+                    averageSpawnsPerItem.set(
+                        item,
+                        (averageSpawnsPerItem.get(item) ?? 0) +
+                            averageItemCount * averageContainerCount,
+                    );
                 }
             }
         }
-    
+
         return averageSpawnsPerItem;
     });
 
@@ -133,7 +140,9 @@ export function RarityGraph({
             const itemData: FrontendItemData = {
                 ...metadata,
                 rarity: 1 / averageCount,
-                pricePerSlot: Math.round(metadata.lastLowPrice / (metadata.width * metadata.height)),
+                pricePerSlot: Math.round(
+                    metadata.lastLowPrice / (metadata.width * metadata.height),
+                ),
             };
 
             if (
@@ -152,7 +161,12 @@ export function RarityGraph({
     const initialXScale = useComputed(() =>
         d3
             .scaleLinear()
-            .domain(d3.extent(averageSpawnsWithMetadata.value, (d) => d.pricePerSlot) as [number, number])
+            .domain(
+                d3.extent(averageSpawnsWithMetadata.value, (d) => d.pricePerSlot) as [
+                    number,
+                    number,
+                ],
+            )
             .range([0, width.value]),
     );
     const initialYScale = useComputed(() =>
@@ -170,9 +184,11 @@ export function RarityGraph({
             return;
         }
 
-        const zoom = d3.zoom<SVGSVGElement, unknown>().on('zoom', (event: { transform: d3.ZoomTransform }) => {
-            transform.value = event.transform;
-        });
+        const zoom = d3
+            .zoom<SVGSVGElement, unknown>()
+            .on('zoom', (event: { transform: d3.ZoomTransform }) => {
+                transform.value = event.transform;
+            });
 
         d3.select(svgRef.current).call(zoom);
     }, []);

@@ -48,7 +48,10 @@ export type ContainerContent = Record<
 
 export function isStaticSpawnms(data: unknown): data is StaticSpawns {
     return (
-        typeof data === 'object' && data != null && 'staticContainers' in data && Array.isArray(data.staticContainers)
+        typeof data === 'object' &&
+        data != null &&
+        'staticContainers' in data &&
+        Array.isArray(data.staticContainers)
     );
 }
 

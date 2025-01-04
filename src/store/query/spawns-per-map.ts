@@ -17,10 +17,13 @@ export const averageContainersPerMap = computed(() => {
         for (const container of staticContainers) {
             const containerTpl = container.template.Items[0]._tpl;
             // we normalize to the translated name early here since some containers have the same name
-            // but different ids, and we want to treat them as being the same here
+            // but different ids, and we want to treat them as being the same
             const containerName = translations.value.get(containerTpl) ?? containerTpl;
 
-            averageContainers.set(containerName, (averageContainers.get(containerName) ?? 0) + container.probability);
+            averageContainers.set(
+                containerName,
+                (averageContainers.get(containerName) ?? 0) + container.probability,
+            );
         }
 
         averageContainersPerMap.set(map, averageContainers);

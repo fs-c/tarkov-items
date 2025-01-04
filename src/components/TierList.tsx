@@ -66,7 +66,9 @@ export function TierList() {
             const itemData: FrontendItemData = {
                 ...metadata,
                 averageCount,
-                pricePerSlot: Math.round(metadata.lastLowPrice / (metadata.width * metadata.height)),
+                pricePerSlot: Math.round(
+                    metadata.lastLowPrice / (metadata.width * metadata.height),
+                ),
             };
 
             averageSpawnsWithMetadata.push(itemData);
@@ -89,12 +91,16 @@ export function TierList() {
             ({ percentile }) => spawnRatesMax - (spawnRatesMax - spawnRatesMin) * percentile,
         );
 
-        const itemsSortedBySpawnrate = filteredItems.sort((a, b) => b.averageCount - a.averageCount);
+        const itemsSortedBySpawnrate = filteredItems.sort(
+            (a, b) => b.averageCount - a.averageCount,
+        );
 
         return itemsSortedBySpawnrate
             .reduce(
                 (tiers, item) => {
-                    const tierIndex = tierBoundaries.findIndex((boundary) => item.averageCount >= boundary);
+                    const tierIndex = tierBoundaries.findIndex(
+                        (boundary) => item.averageCount >= boundary,
+                    );
                     if (tierIndex === -1) {
                         return tiers;
                     }
@@ -111,7 +117,12 @@ export function TierList() {
     return (
         <div className={'flex max-w-screen-xl flex-col divide-y divide-gray-800 xl:max-w-full'}>
             {tiers.value.map((tier, index) => (
-                <Tier key={index} items={tier} metadata={tierMetadata.value[index]} className='py-16' />
+                <Tier
+                    key={index}
+                    items={tier}
+                    metadata={tierMetadata.value[index]}
+                    className='py-16'
+                />
             ))}
         </div>
     );
@@ -172,11 +183,20 @@ function Tier({
     }, [canvas, canvasContainer]);
 
     return (
-        <div ref={canvasContainer} className={tw('relative flex flex-col gap-4 xl:flex-row xl:gap-0', className)}>
+        <div
+            ref={canvasContainer}
+            className={tw('relative flex flex-col gap-4 xl:flex-row xl:gap-0', className)}
+        >
             <div
-                className={'z-10 px-4 xl:flex xl:min-w-max xl:flex-grow xl:basis-0 xl:flex-row xl:justify-end xl:px-0'}
+                className={
+                    'z-10 px-4 xl:flex xl:min-w-max xl:flex-grow xl:basis-0 xl:flex-row xl:justify-end xl:px-0'
+                }
             >
-                <div className={'flex flex-row justify-between gap-2 xl:flex-col xl:items-end xl:justify-normal'}>
+                <div
+                    className={
+                        'flex flex-row justify-between gap-2 xl:flex-col xl:items-end xl:justify-normal'
+                    }
+                >
                     <p
                         className={tw(
                             'h-fit w-fit rounded-xl px-3 py-2 text-xl font-semibold leading-tight',
@@ -194,7 +214,11 @@ function Tier({
                 </div>
             </div>
 
-            <div className={'z-10 flex flex-row flex-wrap gap-4 px-4 xl:w-full xl:max-w-screen-lg xl:px-8'}>
+            <div
+                className={
+                    'z-10 flex flex-row flex-wrap gap-4 px-4 xl:w-full xl:max-w-screen-lg xl:px-8'
+                }
+            >
                 {itemsToShow.value.length === 0
                     ? [...Array<unknown>(numberOfItemsToShow.value)].map((_, index) => (
                           <div key={index} className={'h-16 w-16 animate-pulse bg-gray-700'}></div>
@@ -217,7 +241,11 @@ function Tier({
                                   {item.shortName}
                               </span>
 
-                              <img src={item.iconLink} alt={item.shortName} className={'h-full w-full'} />
+                              <img
+                                  src={item.iconLink}
+                                  alt={item.shortName}
+                                  className={'h-full w-full'}
+                              />
                           </div>
                       ))}
             </div>
