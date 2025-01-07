@@ -47,7 +47,6 @@ export const averageItemsPerContainerPerMap = computed(() => {
             const averageItems = new Map<string, number>();
 
             const normalizedItemDistribution = normalizeProbabilities(content.itemDistribution);
-
             for (const item of normalizedItemDistribution) {
                 averageItems.set(item.tpl, item.probability);
             }

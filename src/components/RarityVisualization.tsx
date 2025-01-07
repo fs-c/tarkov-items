@@ -4,7 +4,7 @@ import { ItemType } from '../model/item-metadata';
 import { InputNumber } from './lib/Input';
 import { ItemDetail } from './ItemDetail';
 import { Location } from '../model/loot-data';
-import { averageContainersPerMap } from '../store/query/spawns-per-map';
+import { averageContainersPerMap } from '../store/computed/spawns-per-map';
 
 function CheckboxGroup({
     label,

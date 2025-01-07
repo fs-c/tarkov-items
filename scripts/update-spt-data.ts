@@ -1,8 +1,3 @@
-/**
- * This sucks for a lot of reasons but I don't want to spend more time on getting
- * data from spt.
- */
-
 // fetch('https://lfs.sp-tarkov.com/sp-tarkov/server/objects/batch', {
 //     method: 'POST',
 //     headers: {
@@ -109,6 +104,7 @@ const downloadSptFile = async (
         const downloadResponse = await fetch(downloadUrl);
         if (downloadResponse.body) {
             await finished(
+                // @ts-expect-error this works fine, maybe the types are wrong (this api is experimental as of right now)
                 Readable.fromWeb(downloadResponse.body).pipe(
                     createWriteStream(`${localDestinationPath}/${relativeDestinationPath}`),
                 ),
@@ -139,6 +135,6 @@ await downloadSptFile(`locales/global/en.json`, `translations.json`);
 
 console.log(`> writing metadata file`);
 await writeFile(
-    `${localDestinationPath}metadata.json`,
+    `${localDestinationPath}/metadata.json`,
     JSON.stringify({ lastUpdated: new Date() }),
 );

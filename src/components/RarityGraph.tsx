@@ -7,7 +7,7 @@ import { ItemMetadata, ItemType } from '../model/item-metadata';
 import {
     averageItemsPerContainerPerMap,
     averageContainersPerMap,
-} from '../store/query/spawns-per-map';
+} from '../store/computed/spawns-per-map';
 
 interface FrontendItemData extends ItemMetadata {
     pricePerSlot: number;
