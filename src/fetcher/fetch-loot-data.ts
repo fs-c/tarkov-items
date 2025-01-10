@@ -5,11 +5,13 @@ import {
     Location,
     isStaticSpawnms,
     isContainerContent,
+    LooseLoot,
+    isLooseLoot,
 } from '../model/loot-data';
 
 /**
- * Paths in this file are RELATIVE TO THE CURRENT PAGE. This is a quick workaround
- * to make github pages work.
+ * Paths in this file are RELATIVE TO THE CURRENT PAGE (i.e. whatever the current path is when the
+ * function is called). This is a quick workaround to make github pages work.
  */
 
 export async function fetchTranslations(): Promise<Translations> {
@@ -61,4 +63,21 @@ export async function fetchContainerContentPerMap(): Promise<Map<Location, Conta
     }
 
     return containerContentPerMap;
+}
+
+export async function fetchLooseLootPerMap(): Promise<Map<Location, LooseLoot>> {
+    const looseLootPerMap = new Map<Location, LooseLoot>();
+
+    for (const location of Object.values(Location)) {
+        const response = await fetch(`./database/${location}/looseLoot.json`);
+        const data = await (response.json() as Promise<unknown>);
+
+        if (!isLooseLoot(data)) {
+            throw new Error(`invalid looseLoot.json for ${location}`);
+        }
+
+        looseLootPerMap.set(location, data);
+    }
+
+    return looseLootPerMap;
 }

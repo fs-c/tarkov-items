@@ -46,6 +46,36 @@ export type ContainerContent = Record<
     }
 >;
 
+export interface LooseLoot {
+    spawnpointCount: {
+        mean: number;
+        std: number;
+    };
+    spawnpointsForced: LooseLootSpawnpointTemplate[];
+    spawnpoints: {
+        locationId: string;
+        probability: number;
+        template: LooseLootSpawnpointTemplate;
+        itemDistribution: {
+            composedKey: { key: string };
+            relativeProbability: number;
+        }[];
+    }[];
+}
+
+interface LooseLootSpawnpointTemplate {
+    Id: string;
+    Position: {
+        x: number;
+        y: number;
+        z: number;
+    };
+    IsAlwaysSpawn: boolean;
+    Items: {
+        _tpl: string;
+    }[];
+}
+
 export function isStaticSpawnms(data: unknown): data is StaticSpawns {
     return (
         typeof data === 'object' &&
@@ -57,4 +87,14 @@ export function isStaticSpawnms(data: unknown): data is StaticSpawns {
 
 export function isContainerContent(data: unknown): data is ContainerContent {
     return typeof data === 'object' && data != null;
+}
+
+export function isLooseLoot(data: unknown): data is LooseLoot {
+    return (
+        typeof data === 'object' &&
+        data != null &&
+        'spawnpointCount' in data &&
+        'spawnpoints' in data &&
+        Array.isArray(data.spawnpoints)
+    );
 }

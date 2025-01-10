@@ -1,6 +1,7 @@
 import { useMemo } from 'preact/hooks';
 import {
     fetchContainerContentPerMap,
+    fetchLooseLootPerMap,
     fetchStaticSpawnsPerMap,
     fetchTranslations,
 } from './fetcher/fetch-loot-data';
@@ -9,9 +10,10 @@ import {
     staticSpawnsPerMap,
     containerContentPerMap,
     allItemMetadata,
+    looseLootPerMap,
 } from './store/loot-data';
 import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
-import { RarityVisualization } from './components/RarityVisualization';
+import { LootSpawnsMap } from './components/LootSpawnsMap';
 
 export function App() {
     useMemo(() => {
@@ -20,6 +22,7 @@ export function App() {
             fetchStaticSpawnsPerMap(),
             fetchContainerContentPerMap(),
             fetchAllItemMetadata(),
+            fetchLooseLootPerMap(),
         ])
             .then(
                 ([
@@ -27,11 +30,13 @@ export function App() {
                     staticSpawnsPerMapValue,
                     containerContentPerMapValue,
                     allItemMetadataValue,
+                    looseLootPerMapValue,
                 ]) => {
                     translations.value = translationsValue;
                     staticSpawnsPerMap.value = staticSpawnsPerMapValue;
                     containerContentPerMap.value = containerContentPerMapValue;
                     allItemMetadata.value = allItemMetadataValue;
+                    looseLootPerMap.value = looseLootPerMapValue;
                 },
             )
             .catch((err: unknown) => {
@@ -41,7 +46,7 @@ export function App() {
 
     return (
         <div className={'h-screen w-screen'}>
-            <RarityVisualization />
+            <LootSpawnsMap />
         </div>
     );
 }
