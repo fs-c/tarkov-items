@@ -11,9 +11,11 @@ import {
     containerContentPerMap,
     allItemMetadata,
     looseLootPerMap,
-} from './store/loot-data';
+    allMapMetadata,
+} from './store/data';
 import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
 import { LootSpawnsMap } from './components/LootSpawnsMap';
+import { fetchAllMapMetadata } from './fetcher/fetch-map-metadata';
 
 export function App() {
     useMemo(() => {
@@ -23,6 +25,7 @@ export function App() {
             fetchContainerContentPerMap(),
             fetchAllItemMetadata(),
             fetchLooseLootPerMap(),
+            fetchAllMapMetadata(),
         ])
             .then(
                 ([
@@ -31,12 +34,14 @@ export function App() {
                     containerContentPerMapValue,
                     allItemMetadataValue,
                     looseLootPerMapValue,
+                    allMapMetadataValue,
                 ]) => {
                     translations.value = translationsValue;
                     staticSpawnsPerMap.value = staticSpawnsPerMapValue;
                     containerContentPerMap.value = containerContentPerMapValue;
                     allItemMetadata.value = allItemMetadataValue;
                     looseLootPerMap.value = looseLootPerMapValue;
+                    allMapMetadata.value = allMapMetadataValue;
                 },
             )
             .catch((err: unknown) => {

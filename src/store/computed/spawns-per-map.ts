@@ -1,5 +1,5 @@
 import { computed } from '@preact/signals';
-import { staticSpawnsPerMap, containerContentPerMap, translations } from '../loot-data';
+import { staticSpawnsPerMap, containerContentPerMap, translations } from '../data';
 import { Location } from '../../model/loot-data';
 import { normalizeProbabilities } from '../../util';
 
