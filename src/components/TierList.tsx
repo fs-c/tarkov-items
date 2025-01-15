@@ -4,7 +4,7 @@ import { allItemMetadata, averageSpawnsPerMap } from '../store/data';
 import { ItemMetadata, ItemType } from '../model/item-metadata';
 import { twMerge as tw } from 'tailwind-merge';
 import { useLayoutEffect, useRef } from 'preact/hooks';
-import { formatBigNumber, randomNumberBetween } from '../util';
+import { formatBigNumber, randomNumberBetween } from '../util/display';
 
 interface FrontendItemData extends ItemMetadata {
     pricePerSlot: number;

@@ -1,7 +1,7 @@
 import { computed } from '@preact/signals';
 import { staticSpawnsPerMap, containerContentPerMap, translations } from '../data';
 import { Location } from '../../model/loot-data';
-import { normalizeProbabilities } from '../../util';
+import { normalizeProbabilities } from '../../util/display';
 
 export const averageContainersPerMap = computed(() => {
     const averageContainersPerMap = new Map<Location, Map<string, number>>();
