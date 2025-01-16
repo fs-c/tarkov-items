@@ -17,34 +17,52 @@ import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
 import { LootSpawnsMap } from './components/LootSpawnsMap';
 import { fetchAllMapMetadata } from './fetcher/fetch-map-metadata';
 
+function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
+    const startTime = performance.now();
+    return fn().then((result) => {
+        console.log(`${name} took ${performance.now() - startTime}ms`);
+        return result;
+    });
+}
+
 export function App() {
     // fetch all data on app load, components should implement loading states as needed
     useMemo(() => {
         // todo: these should really have some kind of error handling/maybe retries?
 
-        void fetchTranslations().then((translationsValue) => {
+        void callAndLogTime(fetchTranslations, 'fetchTranslations').then((translationsValue) => {
             translations.value = translationsValue;
         });
 
-        void fetchStaticSpawnsPerMap().then((staticSpawnsPerMapValue) => {
-            staticSpawnsPerMap.value = staticSpawnsPerMapValue;
-        });
+        void callAndLogTime(fetchStaticSpawnsPerMap, 'fetchStaticSpawnsPerMap').then(
+            (staticSpawnsPerMapValue) => {
+                staticSpawnsPerMap.value = staticSpawnsPerMapValue;
+            },
+        );
 
-        void fetchContainerContentPerMap().then((containerContentPerMapValue) => {
-            containerContentPerMap.value = containerContentPerMapValue;
-        });
+        void callAndLogTime(fetchContainerContentPerMap, 'fetchContainerContentPerMap').then(
+            (containerContentPerMapValue) => {
+                containerContentPerMap.value = containerContentPerMapValue;
+            },
+        );
 
-        void fetchAllItemMetadata().then((allItemMetadataValue) => {
-            allItemMetadata.value = allItemMetadataValue;
-        });
+        void callAndLogTime(fetchAllItemMetadata, 'fetchAllItemMetadata').then(
+            (allItemMetadataValue) => {
+                allItemMetadata.value = allItemMetadataValue;
+            },
+        );
 
-        void fetchLooseLootPerMap().then((looseLootPerMapValue) => {
-            looseLootPerMap.value = looseLootPerMapValue;
-        });
+        void callAndLogTime(fetchLooseLootPerMap, 'fetchLooseLootPerMap').then(
+            (looseLootPerMapValue) => {
+                looseLootPerMap.value = looseLootPerMapValue;
+            },
+        );
 
-        void fetchAllMapMetadata().then((allMapMetadataValue) => {
-            allMapMetadata.value = allMapMetadataValue;
-        });
+        void callAndLogTime(fetchAllMapMetadata, 'fetchAllMapMetadata').then(
+            (allMapMetadataValue) => {
+                allMapMetadata.value = allMapMetadataValue;
+            },
+        );
     }, []);
 
     return (
