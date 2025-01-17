@@ -1,8 +1,8 @@
+import { Location } from '../model/location';
 import {
     ContainerContent,
     StaticSpawns,
     Translations,
-    Location,
     isStaticSpawnms,
     isContainerContent,
     LooseLoot,

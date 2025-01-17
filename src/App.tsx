@@ -16,6 +16,9 @@ import {
 import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
 import { LootSpawnsMap } from './components/LootSpawnsMap';
 import { fetchAllMapMetadata } from './fetcher/fetch-map-metadata';
+import { useSignal } from '@preact/signals';
+import { Location, mapLocationToDisplayName } from './model/location';
+import { twMerge as tw } from 'tailwind-merge';
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
@@ -65,9 +68,44 @@ export function App() {
         );
     }, []);
 
+    const availableLocations = [
+        Location.Customs,
+        Location.FactoryDay,
+        Location.Interchange,
+        Location.Labs,
+        Location.Lighthouse,
+        Location.Reserve,
+        Location.GroundZeroLow,
+        Location.Shoreline,
+        Location.Streets,
+        Location.Woods,
+    ];
+    const selectedLocation = useSignal(Location.Lighthouse);
+
     return (
-        <div className={'h-screen w-screen'}>
-            <LootSpawnsMap />
+        <div className={'relative h-screen w-screen bg-stone-900'}>
+            <div
+                className={
+                    'absolute inset-4 flex h-fit w-fit flex-row gap-4 rounded-xl bg-stone-800/50 px-2 py-2 backdrop-blur-sm'
+                }
+            >
+                {availableLocations.map((location) => (
+                    <button
+                        key={location}
+                        onClick={() => (selectedLocation.value = location)}
+                        className={tw(
+                            'rounded-lg p-2 font-semibold text-stone-300',
+                            selectedLocation.value === location
+                                ? 'bg-stone-300 text-stone-800'
+                                : 'hover:bg-stone-300/10',
+                        )}
+                    >
+                        {mapLocationToDisplayName(location)}
+                    </button>
+                ))}
+            </div>
+
+            <LootSpawnsMap map={selectedLocation} />
         </div>
     );
 }

@@ -1,4 +1,4 @@
-import { Location } from '../model/loot-data';
+import { Location } from '../model/location';
 import { MapMetadata } from '../model/map-metadata';
 
 function getLocationForMapMetadata(mapMetadata: MapMetadata): Location | undefined {

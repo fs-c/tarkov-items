@@ -1,8 +1,9 @@
 import { signal } from '@preact/signals';
-import { Location, LooseLoot, Translations } from '../model/loot-data';
+import { LooseLoot, Translations } from '../model/loot-data';
 import { ItemMetadata } from '../model/item-metadata';
 import { StaticSpawns, ContainerContent } from '../model/loot-data';
 import { MapMetadata } from '../model/map-metadata';
+import { Location } from '../model/location';
 
 export const translations = signal<Translations>(new Map());
 export const staticSpawnsPerMap = signal<Map<Location, StaticSpawns>>(new Map());

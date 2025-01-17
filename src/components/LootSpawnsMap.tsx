@@ -1,13 +1,11 @@
-import { useComputed, useSignal } from '@preact/signals';
-import { Location } from '../model/loot-data';
+import { ReadonlySignal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
 import { allMapMetadata, looseLootPerMap } from '../store/data';
 import { useRef } from 'preact/hooks';
 import { useResizeObserver } from '../util/use-resize-observer';
 import { LoadingSpinner } from './lib/LoadingSpinner';
-import { Dimensions, Point } from '../util/common';
+import { Dimensions, Point } from '../model/common';
 import { throttle } from '../util/throttle';
-
-const map = Location.Lighthouse;
+import { Location } from '../model/location';
 
 // function rotatePoint(point: { x: number; y: number }, radians: number) {
 //     return {
@@ -81,18 +79,18 @@ function transformMapPointToSvgPoint(
     return svgPoint;
 }
 
-export function LootSpawnsMap() {
+export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const containerDimensions = useResizeObserver(containerRef);
 
     const mapMetadata = useComputed(() => {
-        const metadata = allMapMetadata.value.get(map);
+        const metadata = allMapMetadata.value.get(map.value);
         if (!metadata) {
             return undefined;
         }
 
         const data = metadata.maps[0];
-        if (data.key !== map.toString()) {
+        if (data.key !== map.value.toString()) {
             return undefined;
         }
 
@@ -153,7 +151,7 @@ export function LootSpawnsMap() {
     });
 
     const looseLootSpawnpoints = useComputed(() => {
-        const looseLoot = looseLootPerMap.value.get(map);
+        const looseLoot = looseLootPerMap.value.get(map.value);
         if (!looseLoot) {
             return [];
         }
@@ -192,7 +190,20 @@ export function LootSpawnsMap() {
         });
     });
 
+    const initialViewBoxPosition = useComputed(() => {
+        const xOffset =
+            -(containerDimensions.value.width - fittedNaturalMapDimensions.value.width) / 2;
+        const yOffset =
+            -(containerDimensions.value.height - fittedNaturalMapDimensions.value.height) / 2;
+        return { x: xOffset, y: yOffset };
+    });
+
     const viewBoxPosition = useSignal({ x: 0, y: 0 });
+
+    useSignalEffect(() => {
+        viewBoxPosition.value = initialViewBoxPosition.value;
+    });
+
     const viewBoxDimensionsScale = useSignal(1);
     const viewBoxDimensions = useComputed(() => ({
         width: containerDimensions.value.width * viewBoxDimensionsScale.value,
@@ -220,8 +231,6 @@ export function LootSpawnsMap() {
         const mouseY =
             (event.offsetY / containerDimensions.value.height) * viewBoxDimensions.value.height +
             viewBoxPosition.value.y;
-
-        console.log(oldViewBoxDimensions, viewBoxDimensions.value);
 
         // adjust viewBox position to keep the mouse position in place
         // todo: something about this calculation isn't right, the result is not perfect

@@ -1,7 +1,7 @@
 import { RefObject } from 'preact';
 import { useEffect } from 'preact/hooks';
 import { ReadonlySignal, useSignal } from '@preact/signals';
-import { Dimensions } from './common';
+import { Dimensions } from '../model/common';
 
 export function useResizeObserver(elementRef: RefObject<HTMLElement>): ReadonlySignal<Dimensions> {
     const dimensions = useSignal({ width: 0, height: 0 });

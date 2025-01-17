@@ -1,18 +1,3 @@
-export enum Location {
-    Customs = 'bigmap',
-    FactoryDay = 'factory4_day',
-    FactoryNight = 'factory4_night',
-    Interchange = 'interchange',
-    Labs = 'laboratory',
-    Lighthouse = 'lighthouse',
-    Reserve = 'rezervbase',
-    GroundZeroLow = 'sandbox',
-    GroundZeroHigh = 'sandbox_high',
-    Shoreline = 'shoreline',
-    Streets = 'tarkovstreets',
-    Woods = 'woods',
-}
-
 export type Translations = Map<string, string>;
 
 export interface StaticSpawns {
