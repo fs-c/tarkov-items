@@ -1,10 +1,11 @@
-import { useComputed, useSignalEffect } from '@preact/signals';
+import { useComputed, useSignal } from '@preact/signals';
 import { Location } from '../model/loot-data';
 import { allMapMetadata, looseLootPerMap } from '../store/data';
 import { useRef } from 'preact/hooks';
 import { useResizeObserver } from '../util/use-resize-observer';
 import { LoadingSpinner } from './lib/LoadingSpinner';
 import { Dimensions, Point } from '../util/common';
+import { throttle } from '../util/throttle';
 
 const map = Location.Lighthouse;
 
@@ -39,13 +40,6 @@ const map = Location.Lighthouse;
 //     };
 // }
 
-// function transformPointFromCenterToTopLeft(point: Point, dimensions: Dimensions): Point {
-//     return {
-//         x: dimensions.width - (point.x + dimensions.width / 2),
-//         y: point.y + dimensions.height / 2,
-//     };
-// }
-
 function transformMapPointToSvgPoint(
     mapPoint: Point,
     positionedMapDimensions: {
@@ -53,6 +47,7 @@ function transformMapPointToSvgPoint(
         bottomRight: Point;
     },
     naturalMapDimensions: Dimensions,
+    svgDimensions: Dimensions,
 ): Point {
     // center of the line between topLeft and bottomRight
     const { topLeft, bottomRight } = positionedMapDimensions;
@@ -61,14 +56,26 @@ function transformMapPointToSvgPoint(
         y: (topLeft.y + bottomRight.y) / 2,
     };
 
+    // the center of the positioned bounds is not the absolute center of the bounds
+    // (when viewing it just as a rectangle without pos), so we align map points
+    // to make them match up
     const alignedMapPoint = {
         x: mapPoint.x - centerOfBounds.x,
         y: mapPoint.y - centerOfBounds.y,
     };
 
-    const svgPoint = {
+    // this converts points from relative-to-center to relative-to-top-left
+    // and also (!!!) mirrors the x-axis, this will likely break with other maps
+    const topLeftMapPoint = {
         x: naturalMapDimensions.width - (alignedMapPoint.x + naturalMapDimensions.width / 2),
         y: alignedMapPoint.y + naturalMapDimensions.height / 2,
+    };
+
+    // because our svg element is likely not exactly the same size as the natural map size,
+    // we do some scaling here
+    const svgPoint = {
+        x: (topLeftMapPoint.x / naturalMapDimensions.width) * svgDimensions.width,
+        y: (topLeftMapPoint.y / naturalMapDimensions.height) * svgDimensions.height,
     };
 
     return svgPoint;
@@ -145,25 +152,14 @@ export function LootSpawnsMap() {
         }
     });
 
-    const mapTransformationCenter = useComputed(() => {
-        if (!mapBoundingPoints.value) {
-            return { x: 0, y: 0 };
-        }
-
-        // this emulates the center calculation of leaflet
-        return {
-            x: (mapBoundingPoints.value.topLeft.x + mapBoundingPoints.value.bottomRight.x) / 2,
-            y: (mapBoundingPoints.value.topLeft.y + mapBoundingPoints.value.bottomRight.y) / 2,
-        };
-    });
-
     const looseLootSpawnpoints = useComputed(() => {
         const looseLoot = looseLootPerMap.value.get(map);
         if (!looseLoot) {
             return [];
         }
 
-        if (!mapBoundingPoints.value) {
+        const mapBoundingPointsValue = mapBoundingPoints.value;
+        if (!mapBoundingPointsValue) {
             return [];
         }
 
@@ -185,19 +181,10 @@ export function LootSpawnsMap() {
                 y: spawnpoint.template.Position.z,
             };
 
-            // const correctedFromCenter = {
-            //     x: position.x - mapTransformationCenter.value.x,
-            //     y: position.y - mapTransformationCenter.value.y,
-            // };
-            // const transformedFromCenter = transformPointFromCenterToTopLeft(
-            //     correctedFromCenter,
-            //     naturalMapBounds.value,
-            // );
-
             return {
                 position: transformMapPointToSvgPoint(
                     position,
-                    mapBoundingPoints.value,
+                    mapBoundingPointsValue,
                     naturalMapDimensions.value,
                     fittedNaturalMapDimensions.value,
                 ),
@@ -205,33 +192,120 @@ export function LootSpawnsMap() {
         });
     });
 
+    const viewBoxPosition = useSignal({ x: 0, y: 0 });
+    const viewBoxDimensionsScale = useSignal(1);
+    const viewBoxDimensions = useComputed(() => ({
+        width: containerDimensions.value.width * viewBoxDimensionsScale.value,
+        height: containerDimensions.value.height * viewBoxDimensionsScale.value,
+    }));
+    const viewBoxString = useComputed(
+        () =>
+            `${viewBoxPosition.value.x} ${viewBoxPosition.value.y} ${viewBoxDimensions.value.width} ${viewBoxDimensions.value.height}`,
+    );
+
+    const onSvgWheel = (event: WheelEvent) => {
+        event.preventDefault();
+
+        const oldViewBoxDimensions = viewBoxDimensions.value;
+
+        const zoomFactor = 1.1;
+        const localScale = event.deltaY < 0 ? 1 / zoomFactor : zoomFactor;
+
+        viewBoxDimensionsScale.value *= localScale;
+
+        // translate mouse position to viewBox coordinates
+        const mouseX =
+            (event.offsetX / containerDimensions.value.width) * viewBoxDimensions.value.width +
+            viewBoxPosition.value.x;
+        const mouseY =
+            (event.offsetY / containerDimensions.value.height) * viewBoxDimensions.value.height +
+            viewBoxPosition.value.y;
+
+        console.log(oldViewBoxDimensions, viewBoxDimensions.value);
+
+        // adjust viewBox position to keep the mouse position in place
+        // todo: something about this calculation isn't right, the result is not perfect
+        viewBoxPosition.value = {
+            x:
+                mouseX -
+                ((mouseX - viewBoxPosition.value.x) / oldViewBoxDimensions.width) *
+                    viewBoxDimensions.value.width,
+            y:
+                mouseY -
+                ((mouseY - viewBoxPosition.value.y) / oldViewBoxDimensions.height) *
+                    viewBoxDimensions.value.height,
+        };
+    };
+
+    const isPanning = useSignal(false);
+    const lastSvgPanPosition = useSignal({ x: 0, y: 0 });
+
+    const onSvgMouseDown = (event: MouseEvent) => {
+        event.preventDefault();
+
+        isPanning.value = true;
+        lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
+    };
+
+    const onSvgMouseMove = (event: MouseEvent) => {
+        if (!isPanning.value) {
+            return;
+        }
+
+        const deltaX =
+            (lastSvgPanPosition.value.x - event.offsetX) *
+            (viewBoxDimensions.value.width / containerDimensions.value.width);
+        const deltaY =
+            (lastSvgPanPosition.value.y - event.offsetY) *
+            (viewBoxDimensions.value.height / containerDimensions.value.height);
+
+        viewBoxPosition.value = {
+            x: viewBoxPosition.value.x + deltaX,
+            y: viewBoxPosition.value.y + deltaY,
+        };
+
+        lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
+    };
+
+    const onSvgMouseUp = () => {
+        isPanning.value = false;
+    };
+
+    const onSvgMouseLeave = () => {
+        isPanning.value = false;
+    };
+
     return (
         <div class={'flex h-full w-full items-center justify-center'} ref={containerRef}>
             {mapMetadata.value == null || looseLootSpawnpoints.value.length === 0 ? (
                 <LoadingSpinner />
             ) : (
-                <>
-                    <svg
+                <svg
+                    width={containerDimensions.value.width}
+                    height={containerDimensions.value.height}
+                    viewBox={viewBoxString}
+                    onWheel={onSvgWheel}
+                    onMouseDown={onSvgMouseDown}
+                    onMouseMove={throttle(onSvgMouseMove, 120)}
+                    onMouseUp={onSvgMouseUp}
+                    onMouseLeave={onSvgMouseLeave}
+                >
+                    <image
+                        href={mapMetadata.value.svgPath}
                         width={fittedNaturalMapDimensions.value.width}
                         height={fittedNaturalMapDimensions.value.height}
-                    >
-                        <image
-                            href={mapMetadata.value.svgPath}
-                            width={fittedNaturalMapDimensions.value.width}
-                            height={fittedNaturalMapDimensions.value.height}
-                        />
+                    />
 
-                        {looseLootSpawnpoints.value.map((spawnpoint, index) => (
-                            <circle
-                                key={index}
-                                cx={spawnpoint.position.x}
-                                cy={spawnpoint.position.y}
-                                r={2}
-                                fill='green'
-                            />
-                        ))}
-                    </svg>
-                </>
+                    {looseLootSpawnpoints.value.map((spawnpoint, index) => (
+                        <circle
+                            key={index}
+                            cx={spawnpoint.position.x}
+                            cy={spawnpoint.position.y}
+                            r={2}
+                            fill='green'
+                        />
+                    ))}
+                </svg>
             )}
         </div>
     );
