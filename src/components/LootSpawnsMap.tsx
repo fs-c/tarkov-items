@@ -1,12 +1,20 @@
 import { ReadonlySignal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
-import { allMapMetadata, looseLootPerMap, translations } from '../store/data';
+import { allItemMetadata, allMapMetadata, looseLootPerMap, translations } from '../store/data';
 import { useRef } from 'preact/hooks';
 import { useResizeObserver } from '../util/use-resize-observer';
 import { LoadingSpinner } from './lib/LoadingSpinner';
 import { Dimensions, Point } from '../model/common';
 import { Location } from '../model/location';
 import { useZoomAndPan } from '../util/use-zoom-and-pan';
-import { LooseLootSpawnpoint } from '../model/loose-loot';
+import { LooseLootItem, LooseLootSpawnpoint } from '../model/loose-loot';
+import { formatProbability } from '../util/display';
+
+interface FrontendLooseLootSpawnpoint extends LooseLootSpawnpoint {
+    items: (LooseLootItem & {
+        icon: string;
+    })[];
+    svgPosition: Point;
+}
 
 // function rotatePoint(point: { x: number; y: number }, radians: number) {
 //     return {
@@ -151,7 +159,7 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         }
     });
 
-    const spawnpointsWithPosition = useComputed(() => {
+    const spawnpointsWithPosition = useComputed<FrontendLooseLootSpawnpoint[]>(() => {
         const looseLoot = looseLootPerMap.value.get(map.value);
         if (!looseLoot) {
             return [];
@@ -188,8 +196,12 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
             };
 
             return {
-                originalSpawnpoint: spawnpoint,
-                position: transformMapPointToSvgPoint(
+                ...spawnpoint,
+                items: spawnpoint.items.map((item) => ({
+                    ...item,
+                    icon: allItemMetadata.value.get(item.tpl)?.iconLink ?? '',
+                })),
+                svgPosition: transformMapPointToSvgPoint(
                     position,
                     mapBoundingPointsValue,
                     naturalMapDimensionsValue,
@@ -205,9 +217,9 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         fittedNaturalMapDimensions,
     );
 
-    const selectedSpawnpoint = useSignal<LooseLootSpawnpoint | undefined>(undefined);
+    const selectedSpawnpoint = useSignal<FrontendLooseLootSpawnpoint | undefined>(undefined);
 
-    const onSpawnpointClick = (event: MouseEvent, spawnpoint: LooseLootSpawnpoint) => {
+    const onSpawnpointClick = (event: MouseEvent, spawnpoint: FrontendLooseLootSpawnpoint) => {
         event.stopPropagation();
         selectedSpawnpoint.value = spawnpoint;
     };
@@ -244,13 +256,11 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                                     'fill-stone-700/80 stroke-stone-300/50 hover:fill-purple-700/80 hover:stroke-purple-300'
                                 }
                                 key={index}
-                                cx={spawnpoint.position.x}
-                                cy={spawnpoint.position.y}
+                                cx={spawnpoint.svgPosition.x}
+                                cy={spawnpoint.svgPosition.y}
                                 r={3 * viewBoxScale.value}
                                 stroke-width={1 * viewBoxScale.value}
-                                onClick={(event) =>
-                                    onSpawnpointClick(event, spawnpoint.originalSpawnpoint)
-                                }
+                                onClick={(event) => onSpawnpointClick(event, spawnpoint)}
                             />
                         ))}
                     </svg>
@@ -258,18 +268,41 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                     {selectedSpawnpoint.value && (
                         <div
                             class={
-                                'absolute bottom-0 right-0 m-4 flex flex-col gap-2 rounded-lg bg-stone-800/50 p-4 backdrop-blur-sm'
+                                'absolute bottom-0 right-0 m-4 flex h-full max-h-96 w-full max-w-96 flex-col gap-2 rounded-lg bg-stone-800/50 px-4 pt-4 backdrop-blur-sm'
                             }
                         >
-                            {selectedSpawnpoint.value.items.map((item) => (
-                                <div class={'flex flex-row gap-2'}>
-                                    <div class={'text-sm text-stone-300'}>
-                                        {translations.value.get(item.tpl)} {item.probability}
-                                    </div>
-                                </div>
-                            ))}
+                            <div class={'text-sm text-stone-300'}>
+                                <span class={'font-semibold'}>
+                                    {formatProbability(selectedSpawnpoint.value.probability)}
+                                </span>{' '}
+                                spawn chance,{' '}
+                                <span class={'font-semibold'}>
+                                    {selectedSpawnpoint.value.items.length}
+                                </span>{' '}
+                                items
+                            </div>
 
-                            {selectedSpawnpoint.value.probability}
+                            <div class={'flex flex-row flex-wrap gap-2 overflow-y-scroll pb-4'}>
+                                {selectedSpawnpoint.value.items
+                                    .sort((a, b) => b.probability - a.probability)
+                                    .map((item) => (
+                                        <div
+                                            class={
+                                                'flex flex-row items-center gap-2 rounded-md bg-stone-800/70 p-1'
+                                            }
+                                        >
+                                            <img class={'h-8 w-8'} src={item.icon} />
+
+                                            <div class={'text-sm text-stone-300'}>
+                                                {translations.value.get(item.tpl)}
+                                            </div>
+
+                                            <div class={'text-sm text-stone-300'}>
+                                                {formatProbability(item.probability)}
+                                            </div>
+                                        </div>
+                                    ))}
+                            </div>
                         </div>
                     )}
                 </>
