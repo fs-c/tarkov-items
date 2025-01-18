@@ -14,7 +14,7 @@ export function formatBigNumber(number: number): string {
 
 export function normalizeProbabilities<T extends { relativeProbability: number }>(
     objectsWithRelativeProbabilities: T[],
-): (Omit<T, 'relativeProbability'> & { probability: number })[] {
+): (T & { probability: number })[] {
     const relativeProbabilitiesSum = objectsWithRelativeProbabilities.reduce(
         (acc, cur) => (acc += cur.relativeProbability),
         0,

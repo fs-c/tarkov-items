@@ -8,7 +8,11 @@ export function useZoomAndPan(
     containerRef: RefObject<HTMLElement>,
     containerDimensions: ReadonlySignal<Dimensions | undefined>,
     initiallyCentered: ReadonlySignal<Dimensions | undefined>,
-): { viewBoxString: ReadonlySignal<string>; viewBoxScale: ReadonlySignal<number> } {
+): {
+    viewBoxString: ReadonlySignal<string>;
+    viewBoxScale: ReadonlySignal<number>;
+    isPanning: ReadonlySignal<boolean>;
+} {
     const initialViewBoxPosition = useComputed(() => {
         if (containerDimensions.value == null || initiallyCentered.value == null) {
             return { x: 0, y: 0 };
@@ -110,20 +114,24 @@ export function useZoomAndPan(
         };
     };
 
-    const isPanning = useSignal(false);
+    const mouseIsPressed = useSignal(false);
     const lastSvgPanPosition = useSignal({ x: 0, y: 0 });
 
     const onSvgMouseDown = (event: MouseEvent) => {
         event.preventDefault();
 
-        isPanning.value = true;
+        mouseIsPressed.value = true;
         lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
     };
 
+    const isPanning = useSignal(false);
+
     const onSvgMouseMove = (event: MouseEvent) => {
-        if (!isPanning.value || !containerDimensions.value) {
+        if (!mouseIsPressed.value || !containerDimensions.value) {
             return;
         }
+
+        isPanning.value = true;
 
         const deltaX =
             (lastSvgPanPosition.value.x - event.offsetX) *
@@ -140,12 +148,15 @@ export function useZoomAndPan(
         lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
     };
 
-    const onSvgMouseUp = () => {
+    const onSvgMouseUp = (event: MouseEvent) => {
+        event.stopPropagation();
+
+        mouseIsPressed.value = false;
         isPanning.value = false;
     };
 
     const onSvgMouseLeave = () => {
-        isPanning.value = false;
+        mouseIsPressed.value = false;
     };
 
     const viewBoxString = useComputed(
@@ -192,5 +203,6 @@ export function useZoomAndPan(
     return {
         viewBoxString,
         viewBoxScale,
+        isPanning,
     };
 }

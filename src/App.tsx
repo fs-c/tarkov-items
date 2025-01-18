@@ -1,10 +1,8 @@
 import { useMemo } from 'preact/hooks';
 import {
     fetchContainerContentPerMap,
-    fetchLooseLootPerMap,
     fetchStaticSpawnsPerMap,
-    fetchTranslations,
-} from './fetcher/fetch-loot-data';
+} from './fetcher/fetch-container-data';
 import {
     translations,
     staticSpawnsPerMap,
@@ -19,6 +17,8 @@ import { fetchAllMapMetadata } from './fetcher/fetch-map-metadata';
 import { useSignal } from '@preact/signals';
 import { Location, mapLocationToDisplayName } from './model/location';
 import { twMerge as tw } from 'tailwind-merge';
+import { fetchTranslations } from './fetcher/fetch-translations';
+import { fetchLooseLootPerMap } from './fetcher/fetch-loose-loot';
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
@@ -84,7 +84,7 @@ export function App() {
 
     return (
         <div className={'relative h-screen w-screen bg-stone-900'}>
-            <div className={'absolute w-full overflow-scroll text-sm'}>
+            <div className={'absolute z-10 w-full overflow-scroll text-sm'}>
                 <div
                     className={
                         'm-4 flex h-fit w-max flex-row gap-2 rounded-xl bg-stone-800/50 px-2 py-2 backdrop-blur-sm'

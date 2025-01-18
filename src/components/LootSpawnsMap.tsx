@@ -1,12 +1,12 @@
 import { ReadonlySignal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
-import { allMapMetadata, looseLootPerMap } from '../store/data';
+import { allMapMetadata, looseLootPerMap, translations } from '../store/data';
 import { useRef } from 'preact/hooks';
 import { useResizeObserver } from '../util/use-resize-observer';
 import { LoadingSpinner } from './lib/LoadingSpinner';
 import { Dimensions, Point } from '../model/common';
-import { throttle } from '../util/throttle';
 import { Location } from '../model/location';
 import { useZoomAndPan } from '../util/use-zoom-and-pan';
+import { LooseLootSpawnpoint } from '../model/loose-loot';
 
 // function rotatePoint(point: { x: number; y: number }, radians: number) {
 //     return {
@@ -151,7 +151,7 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         }
     });
 
-    const looseLootSpawnpoints = useComputed(() => {
+    const spawnpointsWithPosition = useComputed(() => {
         const looseLoot = looseLootPerMap.value.get(map.value);
         if (!looseLoot) {
             return [];
@@ -183,11 +183,12 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         // context we rename original z to y and y to height to make it more obvious
         return looseLoot.spawnpoints.map((spawnpoint) => {
             const position = {
-                x: spawnpoint.template.Position.x,
-                y: spawnpoint.template.Position.z,
+                x: spawnpoint.position.x,
+                y: spawnpoint.position.y,
             };
 
             return {
+                originalSpawnpoint: spawnpoint,
                 position: transformMapPointToSvgPoint(
                     position,
                     mapBoundingPointsValue,
@@ -198,42 +199,80 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         });
     });
 
-    const { viewBoxString, viewBoxScale } = useZoomAndPan(
+    const { viewBoxString, viewBoxScale, isPanning } = useZoomAndPan(
         containerRef,
         containerDimensions,
         fittedNaturalMapDimensions,
     );
 
+    const selectedSpawnpoint = useSignal<LooseLootSpawnpoint | undefined>(undefined);
+
+    const onSpawnpointClick = (event: MouseEvent, spawnpoint: LooseLootSpawnpoint) => {
+        event.stopPropagation();
+        selectedSpawnpoint.value = spawnpoint;
+    };
+
     return (
-        <div class={'flex h-full w-full items-center justify-center'} ref={containerRef}>
+        <div class={'relative flex h-full w-full items-center justify-center'} ref={containerRef}>
             {!mapMetadata.value ||
-            looseLootSpawnpoints.value.length === 0 ||
+            spawnpointsWithPosition.value.length === 0 ||
             !containerDimensions.value ||
             !fittedNaturalMapDimensions.value ? (
                 <LoadingSpinner />
             ) : (
-                <svg
-                    width={containerDimensions.value.width}
-                    height={containerDimensions.value.height}
-                    viewBox={viewBoxString}
-                >
-                    <image
-                        href={mapMetadata.value.svgPath}
-                        width={fittedNaturalMapDimensions.value.width}
-                        height={fittedNaturalMapDimensions.value.height}
-                    />
-
-                    {looseLootSpawnpoints.value.map((spawnpoint, index) => (
-                        <circle
-                            class={'fill-stone-700/80 stroke-stone-300/50'}
-                            key={index}
-                            cx={spawnpoint.position.x}
-                            cy={spawnpoint.position.y}
-                            r={3 * viewBoxScale.value}
-                            stroke-width={1 * viewBoxScale.value}
+                <>
+                    <svg
+                        width={containerDimensions.value.width}
+                        height={containerDimensions.value.height}
+                        viewBox={viewBoxString}
+                        // have to use onMouseUp with this isPanning hack, otherwise we would also do this when panning
+                        onMouseUp={() => {
+                            if (!isPanning.value) {
+                                selectedSpawnpoint.value = undefined;
+                            }
+                        }}
+                    >
+                        <image
+                            href={mapMetadata.value.svgPath}
+                            width={fittedNaturalMapDimensions.value.width}
+                            height={fittedNaturalMapDimensions.value.height}
                         />
-                    ))}
-                </svg>
+
+                        {spawnpointsWithPosition.value.map((spawnpoint, index) => (
+                            <circle
+                                class={
+                                    'fill-stone-700/80 stroke-stone-300/50 hover:fill-purple-700/80 hover:stroke-purple-300'
+                                }
+                                key={index}
+                                cx={spawnpoint.position.x}
+                                cy={spawnpoint.position.y}
+                                r={3 * viewBoxScale.value}
+                                stroke-width={1 * viewBoxScale.value}
+                                onClick={(event) =>
+                                    onSpawnpointClick(event, spawnpoint.originalSpawnpoint)
+                                }
+                            />
+                        ))}
+                    </svg>
+
+                    {selectedSpawnpoint.value && (
+                        <div
+                            class={
+                                'absolute bottom-0 right-0 m-4 flex flex-col gap-2 rounded-lg bg-stone-800/50 p-4 backdrop-blur-sm'
+                            }
+                        >
+                            {selectedSpawnpoint.value.items.map((item) => (
+                                <div class={'flex flex-row gap-2'}>
+                                    <div class={'text-sm text-stone-300'}>
+                                        {translations.value.get(item.tpl)} {item.probability}
+                                    </div>
+                                </div>
+                            ))}
+
+                            {selectedSpawnpoint.value.probability}
+                        </div>
+                    )}
+                </>
             )}
         </div>
     );
