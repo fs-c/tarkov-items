@@ -86,7 +86,6 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
 
     const mapMetadata = useComputed(() => {
         const metadata = allMapMetadata.value.get(map.value);
-        console.log(metadata);
         if (!metadata) {
             return undefined;
         }
@@ -97,7 +96,6 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
 
     const mapBoundingPoints = useComputed(() => {
         const rawBounds = mapMetadata.value?.bounds;
-        console.log(rawBounds);
         if (!rawBounds) {
             return undefined;
         }
@@ -139,8 +137,6 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
             containerDimensions.value.width / containerDimensions.value.height;
         const naturalMapAspectRatio =
             naturalMapDimensions.value.width / naturalMapDimensions.value.height;
-
-        console.log(containerDimensions.value.height, naturalMapDimensions.value.height);
 
         if (containerAspectRatio > naturalMapAspectRatio) {
             return {
@@ -202,12 +198,7 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         });
     });
 
-    useSignalEffect(() => {
-        console.log(containerDimensions.value);
-        console.log(fittedNaturalMapDimensions.value);
-    });
-
-    const { viewBoxString } = useZoomAndPan(
+    const { viewBoxString, viewBoxScale } = useZoomAndPan(
         containerRef,
         containerDimensions,
         fittedNaturalMapDimensions,
@@ -234,11 +225,12 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
 
                     {looseLootSpawnpoints.value.map((spawnpoint, index) => (
                         <circle
+                            class={'fill-stone-700/80 stroke-stone-300/50'}
                             key={index}
                             cx={spawnpoint.position.x}
                             cy={spawnpoint.position.y}
-                            r={2}
-                            fill='green'
+                            r={3 * viewBoxScale.value}
+                            stroke-width={1 * viewBoxScale.value}
                         />
                     ))}
                 </svg>

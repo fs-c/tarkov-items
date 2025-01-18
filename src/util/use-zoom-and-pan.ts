@@ -8,7 +8,7 @@ export function useZoomAndPan(
     containerRef: RefObject<HTMLElement>,
     containerDimensions: ReadonlySignal<Dimensions | undefined>,
     initiallyCentered: ReadonlySignal<Dimensions | undefined>,
-) {
+): { viewBoxString: ReadonlySignal<string>; viewBoxScale: ReadonlySignal<number> } {
     const initialViewBoxPosition = useComputed(() => {
         if (containerDimensions.value == null || initiallyCentered.value == null) {
             return { x: 0, y: 0 };
@@ -29,14 +29,11 @@ export function useZoomAndPan(
         viewBoxPosition.value = initialViewBoxPosition.value;
     });
 
-    const viewBoxDimensionsScale = useSignal(1);
+    const viewBoxScale = useSignal(1);
     const viewBoxDimensions = useComputed(() => ({
-        width: (containerDimensions.value?.width ?? 0) * viewBoxDimensionsScale.value,
-        height: (containerDimensions.value?.height ?? 0) * viewBoxDimensionsScale.value,
+        width: (containerDimensions.value?.width ?? 0) * viewBoxScale.value,
+        height: (containerDimensions.value?.height ?? 0) * viewBoxScale.value,
     }));
-
-    const maxScale = 2;
-    const minScale = 0.1;
 
     const viewBoxPositionLimits = useComputed(() => {
         const initialPosition = initialViewBoxPosition.value;
@@ -69,6 +66,9 @@ export function useZoomAndPan(
         };
     });
 
+    const maxScale = 2;
+    const minScale = 0.05;
+
     const onSvgWheel = (event: WheelEvent) => {
         if (!containerDimensions.value) {
             return;
@@ -80,8 +80,8 @@ export function useZoomAndPan(
 
         const scaleFactor = event.deltaY < 0 ? 1 / 1.1 : 1.1;
 
-        viewBoxDimensionsScale.value = Math.min(
-            Math.max(viewBoxDimensionsScale.value * scaleFactor, minScale),
+        viewBoxScale.value = Math.min(
+            Math.max(viewBoxScale.value * scaleFactor, minScale),
             maxScale,
         );
 
@@ -191,5 +191,6 @@ export function useZoomAndPan(
 
     return {
         viewBoxString,
+        viewBoxScale,
     };
 }

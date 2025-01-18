@@ -1,28 +1,3 @@
-// fetch('https://lfs.sp-tarkov.com/sp-tarkov/server/objects/batch', {
-//     method: 'POST',
-//     headers: {
-//         Accept: 'application/vnd.git-lfs+json',
-//         'Content-Type': 'application/vnd.git-lfs+json',
-//     },
-//     body: JSON.stringify({
-//         operation: 'download',
-//         transfers: ['basic'],
-//         objects: [
-//             {
-//                 oid: 'd0a5eed6a7b5871152c50276c7a505a4ddbe58fee03b2d9a9b57a42ad5ad5f6d',
-//                 size: 19803022,
-//             },
-//         ],
-//     }),
-// })
-//     .then((res) => res.json())
-//     .then((data) => fetch(data.objects[0].actions.download.href))
-//     .then((res) => res.json())
-//     .then((data) => {
-//         console.log(data);
-//     })
-//     .catch(console.error);
-
 import { Readable } from 'stream';
 import { mkdir, writeFile } from 'fs/promises';
 import { finished } from 'stream/promises';
@@ -104,7 +79,6 @@ const downloadSptFile = async (
         const downloadResponse = await fetch(downloadUrl);
         if (downloadResponse.body) {
             await finished(
-                // @ts-expect-error this works fine, maybe the types are wrong (this api is experimental as of right now)
                 Readable.fromWeb(downloadResponse.body).pipe(
                     createWriteStream(`${localDestinationPath}/${relativeDestinationPath}`),
                 ),

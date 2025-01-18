@@ -84,7 +84,7 @@ export function App() {
 
     return (
         <div className={'relative h-screen w-screen bg-stone-900'}>
-            <div className={'absolute w-full overflow-scroll'}>
+            <div className={'absolute w-full overflow-scroll text-sm'}>
                 <div
                     className={
                         'm-4 flex h-fit w-max flex-row gap-2 rounded-xl bg-stone-800/50 px-2 py-2 backdrop-blur-sm'
