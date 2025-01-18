@@ -3,8 +3,10 @@ import { useEffect } from 'preact/hooks';
 import { ReadonlySignal, useSignal } from '@preact/signals';
 import { Dimensions } from '../model/common';
 
-export function useResizeObserver(elementRef: RefObject<HTMLElement>): ReadonlySignal<Dimensions> {
-    const dimensions = useSignal({ width: 0, height: 0 });
+export function useResizeObserver(
+    elementRef: RefObject<HTMLElement>,
+): ReadonlySignal<Dimensions | undefined> {
+    const dimensions = useSignal<Dimensions | undefined>(undefined);
 
     useEffect(() => {
         if (elementRef.current == null) {
@@ -20,7 +22,7 @@ export function useResizeObserver(elementRef: RefObject<HTMLElement>): ReadonlyS
             const width = entries[0].borderBoxSize[0].inlineSize;
             const height = entries[0].borderBoxSize[0].blockSize;
 
-            if (width !== dimensions.value.width || height !== dimensions.value.height) {
+            if (width !== dimensions.value?.width || height !== dimensions.value?.height) {
                 dimensions.value = { width, height };
             }
         });

@@ -69,11 +69,11 @@ export function App() {
     }, []);
 
     const availableLocations = [
+        Location.Lighthouse,
         Location.Customs,
         Location.FactoryDay,
         Location.Interchange,
         Location.Labs,
-        Location.Lighthouse,
         Location.Reserve,
         Location.GroundZeroLow,
         Location.Shoreline,
@@ -84,25 +84,27 @@ export function App() {
 
     return (
         <div className={'relative h-screen w-screen bg-stone-900'}>
-            <div
-                className={
-                    'absolute inset-4 flex h-fit w-fit flex-row gap-4 rounded-xl bg-stone-800/50 px-2 py-2 backdrop-blur-sm'
-                }
-            >
-                {availableLocations.map((location) => (
-                    <button
-                        key={location}
-                        onClick={() => (selectedLocation.value = location)}
-                        className={tw(
-                            'rounded-lg p-2 font-semibold text-stone-300',
-                            selectedLocation.value === location
-                                ? 'bg-stone-300 text-stone-800'
-                                : 'hover:bg-stone-300/10',
-                        )}
-                    >
-                        {mapLocationToDisplayName(location)}
-                    </button>
-                ))}
+            <div className={'absolute w-full overflow-scroll'}>
+                <div
+                    className={
+                        'm-4 flex h-fit w-max flex-row gap-2 rounded-xl bg-stone-800/50 px-2 py-2 backdrop-blur-sm'
+                    }
+                >
+                    {availableLocations.map((location) => (
+                        <button
+                            key={location}
+                            onClick={() => (selectedLocation.value = location)}
+                            className={tw(
+                                'rounded-lg px-4 py-2 font-semibold text-stone-300',
+                                selectedLocation.value === location
+                                    ? 'bg-stone-300 text-stone-800'
+                                    : 'hover:bg-stone-300/10',
+                            )}
+                        >
+                            {mapLocationToDisplayName(location)}
+                        </button>
+                    ))}
+                </div>
             </div>
 
             <LootSpawnsMap map={selectedLocation} />

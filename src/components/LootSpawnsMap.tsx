@@ -6,6 +6,7 @@ import { LoadingSpinner } from './lib/LoadingSpinner';
 import { Dimensions, Point } from '../model/common';
 import { throttle } from '../util/throttle';
 import { Location } from '../model/location';
+import { useZoomAndPan } from '../util/use-zoom-and-pan';
 
 // function rotatePoint(point: { x: number; y: number }, radians: number) {
 //     return {
@@ -85,20 +86,18 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
 
     const mapMetadata = useComputed(() => {
         const metadata = allMapMetadata.value.get(map.value);
+        console.log(metadata);
         if (!metadata) {
             return undefined;
         }
 
-        const data = metadata.maps[0];
-        if (data.key !== map.value.toString()) {
-            return undefined;
-        }
-
-        return data;
+        // we are assuming that we always want to get the first map, this might be an issue
+        return metadata.maps[0];
     });
 
     const mapBoundingPoints = useComputed(() => {
         const rawBounds = mapMetadata.value?.bounds;
+        console.log(rawBounds);
         if (!rawBounds) {
             return undefined;
         }
@@ -118,7 +117,7 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
 
     const naturalMapDimensions = useComputed(() => {
         if (!mapBoundingPoints.value) {
-            return { width: 0, height: 0 };
+            return undefined;
         }
 
         const topLeft = mapBoundingPoints.value.topLeft;
@@ -131,11 +130,17 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
     });
 
     const fittedNaturalMapDimensions = useComputed(() => {
+        if (!containerDimensions.value || !naturalMapDimensions.value) {
+            return undefined;
+        }
+
         // do an object-fit inside the container width/height
         const containerAspectRatio =
             containerDimensions.value.width / containerDimensions.value.height;
         const naturalMapAspectRatio =
             naturalMapDimensions.value.width / naturalMapDimensions.value.height;
+
+        console.log(containerDimensions.value.height, naturalMapDimensions.value.height);
 
         if (containerAspectRatio > naturalMapAspectRatio) {
             return {
@@ -157,7 +162,14 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         }
 
         const mapBoundingPointsValue = mapBoundingPoints.value;
-        if (!mapBoundingPointsValue) {
+        const naturalMapDimensionsValue = naturalMapDimensions.value;
+        const fittedNaturalMapDimensionsValue = fittedNaturalMapDimensions.value;
+
+        if (
+            !mapBoundingPointsValue ||
+            !naturalMapDimensionsValue ||
+            !fittedNaturalMapDimensionsValue
+        ) {
             return [];
         }
 
@@ -183,121 +195,36 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                 position: transformMapPointToSvgPoint(
                     position,
                     mapBoundingPointsValue,
-                    naturalMapDimensions.value,
-                    fittedNaturalMapDimensions.value,
+                    naturalMapDimensionsValue,
+                    fittedNaturalMapDimensionsValue,
                 ),
             };
         });
     });
 
-    const initialViewBoxPosition = useComputed(() => {
-        const xOffset =
-            -(containerDimensions.value.width - fittedNaturalMapDimensions.value.width) / 2;
-        const yOffset =
-            -(containerDimensions.value.height - fittedNaturalMapDimensions.value.height) / 2;
-        return { x: xOffset, y: yOffset };
-    });
-
-    const viewBoxPosition = useSignal({ x: 0, y: 0 });
-
     useSignalEffect(() => {
-        viewBoxPosition.value = initialViewBoxPosition.value;
+        console.log(containerDimensions.value);
+        console.log(fittedNaturalMapDimensions.value);
     });
 
-    const viewBoxDimensionsScale = useSignal(1);
-    const viewBoxDimensions = useComputed(() => ({
-        width: containerDimensions.value.width * viewBoxDimensionsScale.value,
-        height: containerDimensions.value.height * viewBoxDimensionsScale.value,
-    }));
-    const viewBoxString = useComputed(
-        () =>
-            `${viewBoxPosition.value.x} ${viewBoxPosition.value.y} ${viewBoxDimensions.value.width} ${viewBoxDimensions.value.height}`,
+    const { viewBoxString } = useZoomAndPan(
+        containerRef,
+        containerDimensions,
+        fittedNaturalMapDimensions,
     );
-
-    const onSvgWheel = (event: WheelEvent) => {
-        event.preventDefault();
-
-        const oldViewBoxDimensions = viewBoxDimensions.value;
-
-        const zoomFactor = 1.1;
-        const localScale = event.deltaY < 0 ? 1 / zoomFactor : zoomFactor;
-
-        viewBoxDimensionsScale.value *= localScale;
-
-        // translate mouse position to viewBox coordinates
-        const mouseX =
-            (event.offsetX / containerDimensions.value.width) * viewBoxDimensions.value.width +
-            viewBoxPosition.value.x;
-        const mouseY =
-            (event.offsetY / containerDimensions.value.height) * viewBoxDimensions.value.height +
-            viewBoxPosition.value.y;
-
-        // adjust viewBox position to keep the mouse position in place
-        // todo: something about this calculation isn't right, the result is not perfect
-        viewBoxPosition.value = {
-            x:
-                mouseX -
-                ((mouseX - viewBoxPosition.value.x) / oldViewBoxDimensions.width) *
-                    viewBoxDimensions.value.width,
-            y:
-                mouseY -
-                ((mouseY - viewBoxPosition.value.y) / oldViewBoxDimensions.height) *
-                    viewBoxDimensions.value.height,
-        };
-    };
-
-    const isPanning = useSignal(false);
-    const lastSvgPanPosition = useSignal({ x: 0, y: 0 });
-
-    const onSvgMouseDown = (event: MouseEvent) => {
-        event.preventDefault();
-
-        isPanning.value = true;
-        lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
-    };
-
-    const onSvgMouseMove = (event: MouseEvent) => {
-        if (!isPanning.value) {
-            return;
-        }
-
-        const deltaX =
-            (lastSvgPanPosition.value.x - event.offsetX) *
-            (viewBoxDimensions.value.width / containerDimensions.value.width);
-        const deltaY =
-            (lastSvgPanPosition.value.y - event.offsetY) *
-            (viewBoxDimensions.value.height / containerDimensions.value.height);
-
-        viewBoxPosition.value = {
-            x: viewBoxPosition.value.x + deltaX,
-            y: viewBoxPosition.value.y + deltaY,
-        };
-
-        lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
-    };
-
-    const onSvgMouseUp = () => {
-        isPanning.value = false;
-    };
-
-    const onSvgMouseLeave = () => {
-        isPanning.value = false;
-    };
 
     return (
         <div class={'flex h-full w-full items-center justify-center'} ref={containerRef}>
-            {mapMetadata.value == null || looseLootSpawnpoints.value.length === 0 ? (
+            {!mapMetadata.value ||
+            looseLootSpawnpoints.value.length === 0 ||
+            !containerDimensions.value ||
+            !fittedNaturalMapDimensions.value ? (
                 <LoadingSpinner />
             ) : (
                 <svg
                     width={containerDimensions.value.width}
                     height={containerDimensions.value.height}
                     viewBox={viewBoxString}
-                    onWheel={onSvgWheel}
-                    onMouseDown={onSvgMouseDown}
-                    onMouseMove={throttle(onSvgMouseMove, 120)}
-                    onMouseUp={onSvgMouseUp}
-                    onMouseLeave={onSvgMouseLeave}
                 >
                     <image
                         href={mapMetadata.value.svgPath}
