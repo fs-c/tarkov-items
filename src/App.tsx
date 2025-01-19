@@ -14,11 +14,13 @@ import {
 import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
 import { LootSpawnsMap } from './components/LootSpawnsMap';
 import { fetchAllMapMetadata } from './fetcher/fetch-map-metadata';
-import { useSignal } from '@preact/signals';
+import { useComputed, useSignal } from '@preact/signals';
 import { Location, mapLocationToDisplayName } from './model/location';
 import { twMerge as tw } from 'tailwind-merge';
 import { fetchTranslations } from './fetcher/fetch-translations';
 import { fetchLooseLootPerMap } from './fetcher/fetch-loose-loot';
+import { LooseLootSpawnpoint } from './model/loose-loot';
+import { formatProbability } from './util/display';
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
@@ -28,10 +30,9 @@ function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     });
 }
 
-export function App() {
-    // fetch all data on app load, components should implement loading states as needed
+function useFetchAllData() {
     useMemo(() => {
-        // todo: these should really have some kind of error handling/maybe retries?
+        // todo: these should really have some kind of error handling, or maybe retries?
 
         void callAndLogTime(fetchTranslations, 'fetchTranslations').then((translationsValue) => {
             translations.value = translationsValue;
@@ -67,20 +68,46 @@ export function App() {
             },
         );
     }, []);
+}
 
-    const availableLocations = [
-        Location.Lighthouse,
-        Location.Customs,
-        Location.FactoryDay,
-        Location.Interchange,
-        Location.Labs,
-        Location.Reserve,
-        Location.GroundZeroLow,
-        Location.Shoreline,
-        Location.Streets,
-        Location.Woods,
-    ];
+const availableLocations = [
+    Location.Lighthouse,
+    Location.Customs,
+    Location.FactoryDay,
+    Location.Interchange,
+    Location.Labs,
+    Location.Reserve,
+    Location.GroundZeroLow,
+    Location.Shoreline,
+    Location.Streets,
+    Location.Woods,
+];
+
+export function App() {
+    useFetchAllData();
+
     const selectedLocation = useSignal(Location.Lighthouse);
+
+    const selectedSpawnpoint = useSignal<LooseLootSpawnpoint | undefined>(undefined);
+
+    const mapMetadata = useComputed(() => {
+        const metadata = allMapMetadata.value.get(selectedLocation.value);
+        if (!metadata) {
+            return undefined;
+        }
+
+        // we are assuming that we always want to get the first map, this might be an issue
+        return metadata.maps[0];
+    });
+
+    const mapSpawnpoints = useComputed(() => {
+        const looseLoot = looseLootPerMap.value.get(selectedLocation.value);
+        if (!looseLoot) {
+            return [];
+        }
+
+        return looseLoot.spawnpoints;
+    });
 
     return (
         <div className={'relative h-screen w-screen bg-stone-900'}>
@@ -107,7 +134,59 @@ export function App() {
                 </div>
             </div>
 
-            <LootSpawnsMap map={selectedLocation} />
+            <LootSpawnsMap
+                mapMetadata={mapMetadata}
+                spawnpoints={mapSpawnpoints}
+                $selectedSpawnpoint={selectedSpawnpoint}
+            />
+
+            {selectedSpawnpoint.value && (
+                <div
+                    class={
+                        'absolute bottom-0 right-0 m-4 flex h-full max-h-96 w-full max-w-[400px] flex-col gap-2 rounded-lg bg-stone-800/50 pt-4 backdrop-blur-sm'
+                    }
+                >
+                    <div class={'px-4 text-sm text-stone-300'}>
+                        <span class={'font-semibold'}>
+                            {formatProbability(selectedSpawnpoint.value.probability)}
+                        </span>{' '}
+                        spawn chance,{' '}
+                        <span class={'font-semibold'}>{selectedSpawnpoint.value.items.length}</span>{' '}
+                        items
+                    </div>
+
+                    <div class={'flex flex-row flex-wrap gap-2 overflow-y-auto px-4 pb-4'}>
+                        {selectedSpawnpoint.value.items
+                            .sort((a, b) => b.probability - a.probability)
+                            .map((item) => (
+                                <div
+                                    class={
+                                        'flex flex-row items-center gap-2 rounded-md bg-stone-900/70 p-1 pr-2'
+                                    }
+                                >
+                                    <div
+                                        class={
+                                            'overflow-hidden rounded-md border border-stone-700/50'
+                                        }
+                                    >
+                                        <img
+                                            class={'h-8 w-8 [clip-path:inset(1px)]'}
+                                            src={allItemMetadata.value.get(item.tpl)?.iconLink}
+                                        />
+                                    </div>
+
+                                    <div class={'text-sm text-stone-300'}>
+                                        {translations.value.get(item.tpl)}
+                                    </div>
+
+                                    <div class={'text-sm font-semibold text-stone-300'}>
+                                        {formatProbability(item.probability)}
+                                    </div>
+                                </div>
+                            ))}
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

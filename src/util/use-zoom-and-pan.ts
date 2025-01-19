@@ -45,6 +45,7 @@ export function useZoomAndPan(
             return { x: { min: -Infinity, max: Infinity }, y: { min: -Infinity, max: Infinity } };
         }
 
+        // todo: right now this does not consider scale, would be nice if it did
         return {
             x: {
                 min: -elementDimensions.value.width / 2 + initialViewBoxPosition.value.x,

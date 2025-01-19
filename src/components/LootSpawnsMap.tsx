@@ -1,13 +1,13 @@
-import { ReadonlySignal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
+import { ReadonlySignal, Signal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
 import { allItemMetadata, allMapMetadata, looseLootPerMap, translations } from '../store/data';
 import { useRef } from 'preact/hooks';
 import { useResizeObserver } from '../util/use-resize-observer';
 import { LoadingSpinner } from './lib/LoadingSpinner';
 import { Dimensions, Point } from '../model/common';
-import { Location } from '../model/location';
 import { useZoomAndPan } from '../util/use-zoom-and-pan';
-import { LooseLootItem, LooseLootSpawnpoint } from '../model/loose-loot';
+import { LooseLoot, LooseLootItem, LooseLootSpawnpoint } from '../model/loose-loot';
 import { formatProbability } from '../util/display';
+import { MapMetadata } from '../model/map-metadata';
 
 interface FrontendLooseLootSpawnpoint extends LooseLootSpawnpoint {
     items: (LooseLootItem & {
@@ -88,19 +88,17 @@ function transformMapPointToSvgPoint(
     return svgPoint;
 }
 
-export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
+export function LootSpawnsMap({
+    mapMetadata,
+    spawnpoints,
+    $selectedSpawnpoint,
+}: {
+    mapMetadata: ReadonlySignal<MapMetadata | undefined>;
+    spawnpoints: ReadonlySignal<LooseLootSpawnpoint[]>;
+    $selectedSpawnpoint: Signal<LooseLootSpawnpoint | undefined>;
+}) {
     const containerRef = useRef<HTMLDivElement>(null);
     const containerDimensions = useResizeObserver(containerRef);
-
-    const mapMetadata = useComputed(() => {
-        const metadata = allMapMetadata.value.get(map.value);
-        if (!metadata) {
-            return undefined;
-        }
-
-        // we are assuming that we always want to get the first map, this might be an issue
-        return metadata.maps[0];
-    });
 
     const mapBoundingPoints = useComputed(() => {
         const rawBounds = mapMetadata.value?.bounds;
@@ -160,11 +158,6 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
     });
 
     const spawnpointsWithPosition = useComputed<FrontendLooseLootSpawnpoint[]>(() => {
-        const looseLoot = looseLootPerMap.value.get(map.value);
-        if (!looseLoot) {
-            return [];
-        }
-
         const mapBoundingPointsValue = mapBoundingPoints.value;
         const naturalMapDimensionsValue = naturalMapDimensions.value;
         const fittedNaturalMapDimensionsValue = fittedNaturalMapDimensions.value;
@@ -189,7 +182,7 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
 
         // positions are given as [x, y, z] where y is the height, since we are (mostly) in a 2d
         // context we rename original z to y and y to height to make it more obvious
-        return looseLoot.spawnpoints.map((spawnpoint) => {
+        return spawnpoints.value.map((spawnpoint) => {
             const position = {
                 x: spawnpoint.position.x,
                 y: spawnpoint.position.y,
@@ -222,15 +215,13 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         onSvgMouseLeave,
     } = useZoomAndPan(containerDimensions, fittedNaturalMapDimensions);
 
-    const selectedSpawnpoint = useSignal<FrontendLooseLootSpawnpoint | undefined>(undefined);
-
     const onSpawnpointClick = (event: MouseEvent, spawnpoint: FrontendLooseLootSpawnpoint) => {
         event.stopPropagation();
-        selectedSpawnpoint.value = spawnpoint;
+        $selectedSpawnpoint.value = spawnpoint;
     };
 
     return (
-        <div class={'relative flex h-full w-full items-center justify-center'} ref={containerRef}>
+        <div class={'flex h-full w-full items-center justify-center'} ref={containerRef}>
             {!mapMetadata.value ||
             spawnpointsWithPosition.value.length === 0 ||
             !containerDimensions.value ||
@@ -247,7 +238,7 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                         onMouseMove={onSvgMouseMove}
                         onMouseUp={(event) => {
                             if (!isPanning.value) {
-                                selectedSpawnpoint.value = undefined;
+                                $selectedSpawnpoint.value = undefined;
                             }
 
                             onSvgMouseUp(event);
@@ -274,56 +265,6 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                             />
                         ))}
                     </svg>
-
-                    {selectedSpawnpoint.value && (
-                        <div
-                            class={
-                                'absolute bottom-0 right-0 m-4 flex h-full max-h-96 w-full max-w-96 flex-col gap-2 rounded-lg bg-stone-800/50 pt-4 backdrop-blur-sm'
-                            }
-                        >
-                            <div class={'px-4 text-sm text-stone-300'}>
-                                <span class={'font-semibold'}>
-                                    {formatProbability(selectedSpawnpoint.value.probability)}
-                                </span>{' '}
-                                spawn chance,{' '}
-                                <span class={'font-semibold'}>
-                                    {selectedSpawnpoint.value.items.length}
-                                </span>{' '}
-                                items
-                            </div>
-
-                            <div class={'flex flex-row flex-wrap gap-2 overflow-y-auto px-4 pb-4'}>
-                                {selectedSpawnpoint.value.items
-                                    .sort((a, b) => b.probability - a.probability)
-                                    .map((item) => (
-                                        <div
-                                            class={
-                                                'flex flex-row items-center gap-2 rounded-md bg-stone-900/70 p-1'
-                                            }
-                                        >
-                                            <div
-                                                class={
-                                                    'overflow-hidden rounded-md border border-stone-700/50'
-                                                }
-                                            >
-                                                <img
-                                                    class={'h-8 w-8 [clip-path:inset(1px)]'}
-                                                    src={item.icon}
-                                                />
-                                            </div>
-
-                                            <div class={'text-sm text-stone-300'}>
-                                                {translations.value.get(item.tpl)}
-                                            </div>
-
-                                            <div class={'text-sm font-semibold text-stone-300'}>
-                                                {formatProbability(item.probability)}
-                                            </div>
-                                        </div>
-                                    ))}
-                            </div>
-                        </div>
-                    )}
                 </>
             )}
         </div>
