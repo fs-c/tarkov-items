@@ -1,6 +1,7 @@
 import { ReadonlySignal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
 import { Dimensions } from '../model/common';
 import { throttle } from './throttle';
+import { bounded } from './math';
 
 export function useZoomAndPan(
     elementDimensions: ReadonlySignal<Dimensions | undefined>,
@@ -40,31 +41,19 @@ export function useZoomAndPan(
     }));
 
     const viewBoxPositionLimits = useComputed(() => {
-        const initialPosition = initialViewBoxPosition.value;
-
-        const minViewBoxPositionX = initialPosition.x - (elementDimensions.value?.width ?? 0) / 2;
-        const minViewBoxPositionY = initialPosition.y - (elementDimensions.value?.height ?? 0) / 2;
-        const maxViewBoxPositionX = initialPosition.x + (elementDimensions.value?.width ?? 0) / 2;
-        const maxViewBoxPositionY = initialPosition.y + (elementDimensions.value?.height ?? 0) / 2;
+        if (elementDimensions.value == null || initiallyCentered.value == null) {
+            return { x: { min: -Infinity, max: Infinity }, y: { min: -Infinity, max: Infinity } };
+        }
 
         return {
-            minViewBoxPositionX,
-            minViewBoxPositionY,
-            maxViewBoxPositionX,
-            maxViewBoxPositionY,
-        };
-    });
-
-    const limitedViewBoxPosition = useComputed(() => {
-        return {
-            x: Math.min(
-                Math.max(viewBoxPosition.value.x, viewBoxPositionLimits.value.minViewBoxPositionX),
-                viewBoxPositionLimits.value.maxViewBoxPositionX,
-            ),
-            y: Math.min(
-                Math.max(viewBoxPosition.value.y, viewBoxPositionLimits.value.minViewBoxPositionY),
-                viewBoxPositionLimits.value.maxViewBoxPositionY,
-            ),
+            x: {
+                min: -elementDimensions.value.width / 2 + initialViewBoxPosition.value.x,
+                max: elementDimensions.value.width / 2 + initialViewBoxPosition.value.x,
+            },
+            y: {
+                min: -elementDimensions.value.height + initiallyCentered.value.height / 2,
+                max: initiallyCentered.value.height / 2,
+            },
         };
     });
 
@@ -78,38 +67,26 @@ export function useZoomAndPan(
 
         event.preventDefault();
 
-        const oldViewBoxDimensions = viewBoxDimensions.value;
-
         const scaleFactor = event.deltaY < 0 ? 1 / 1.1 : 1.1;
+        const newScale = bounded(viewBoxScale.value * scaleFactor, minScale, maxScale);
 
-        viewBoxScale.value = Math.min(
-            Math.max(viewBoxScale.value * scaleFactor, minScale),
-            maxScale,
-        );
+        // calculate (relative) mouse position in [0, 1]
+        const relativeX = event.offsetX / elementDimensions.value.width;
+        const relativeY = event.offsetY / elementDimensions.value.height;
 
-        // translate mouse position to viewBox coordinates
-        const mouseX =
-            (event.offsetX / elementDimensions.value.width) * viewBoxDimensions.value.width +
-            viewBoxPosition.value.x;
-        const mouseY =
-            (event.offsetY / elementDimensions.value.height) * viewBoxDimensions.value.height +
-            viewBoxPosition.value.y;
+        // calculate how much the dimensions will change
+        const newWidth = elementDimensions.value.width * newScale;
+        const newHeight = elementDimensions.value.height * newScale;
+        const deltaWidth = newWidth - viewBoxDimensions.value.width;
+        const deltaHeight = newHeight - viewBoxDimensions.value.height;
 
-        // adjust viewBox position to keep the mouse position in place
-        // todo: something about this calculation isn't right, the result is not perfect
-        const viewBoxPositionX =
-            mouseX -
-            ((mouseX - viewBoxPosition.value.x) / oldViewBoxDimensions.width) *
-                viewBoxDimensions.value.width;
-        const viewBoxPositionY =
-            mouseY -
-            ((mouseY - viewBoxPosition.value.y) / oldViewBoxDimensions.height) *
-                viewBoxDimensions.value.height;
-
+        // adjust viewBox position to keep mouse position fixed
         viewBoxPosition.value = {
-            x: viewBoxPositionX,
-            y: viewBoxPositionY,
+            x: viewBoxPosition.value.x - deltaWidth * relativeX,
+            y: viewBoxPosition.value.y - deltaHeight * relativeY,
         };
+
+        viewBoxScale.value = newScale;
     };
 
     const mouseIsPressed = useSignal(false);
@@ -138,9 +115,11 @@ export function useZoomAndPan(
             (lastSvgPanPosition.value.y - event.offsetY) *
             (viewBoxDimensions.value.height / elementDimensions.value.height);
 
+        const limits = viewBoxPositionLimits.value;
+
         viewBoxPosition.value = {
-            x: viewBoxPosition.value.x + deltaX,
-            y: viewBoxPosition.value.y + deltaY,
+            x: bounded(viewBoxPosition.value.x + deltaX, limits.x.min, limits.x.max),
+            y: bounded(viewBoxPosition.value.y + deltaY, limits.y.min, limits.y.max),
         };
 
         lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
@@ -159,7 +138,7 @@ export function useZoomAndPan(
 
     const viewBoxString = useComputed(
         () =>
-            `${limitedViewBoxPosition.value.x} ${limitedViewBoxPosition.value.y} ${viewBoxDimensions.value.width} ${viewBoxDimensions.value.height}`,
+            `${viewBoxPosition.value.x} ${viewBoxPosition.value.y} ${viewBoxDimensions.value.width} ${viewBoxDimensions.value.height}`,
     );
 
     return {
