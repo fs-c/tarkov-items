@@ -21,6 +21,7 @@ import { fetchTranslations } from './fetcher/fetch-translations';
 import { fetchLooseLootPerMap } from './fetcher/fetch-loose-loot';
 import { LooseLootSpawnpoint } from './model/loose-loot';
 import { formatProbability } from './util/display';
+import { MagnifyingGlass } from './components/lib/MagnifyingGlass';
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
@@ -111,10 +112,10 @@ export function App() {
 
     return (
         <div className={'relative h-screen w-screen bg-stone-900'}>
-            <div className={'absolute z-10 w-full overflow-x-auto text-sm'}>
+            <div className={'absolute z-10 flex w-full flex-row justify-between gap-8 text-sm'}>
                 <div
                     className={
-                        'm-4 flex h-fit w-max flex-row gap-2 rounded-xl bg-stone-800/50 px-2 py-2 backdrop-blur-sm'
+                        'm-4 flex h-[52px] w-max flex-row gap-2 rounded-xl bg-stone-800/50 p-2 backdrop-blur-sm'
                     }
                 >
                     {availableLocations.map((location) => (
@@ -132,6 +133,20 @@ export function App() {
                         </button>
                     ))}
                 </div>
+
+                <button
+                    className={
+                        'm-4 flex h-[52px] flex-row items-center gap-3 rounded-xl bg-stone-800/50 px-4 py-2 backdrop-blur-sm hover:bg-stone-300/10'
+                    }
+                >
+                    <MagnifyingGlass />
+
+                    <p className={'text-stone-300'}>Search spawnpoints...</p>
+
+                    <p className={'text-stone-300'}>
+                        <span className={'font-semibold'}>Ctrl K</span>
+                    </p>
+                </button>
             </div>
 
             <LootSpawnsMap
@@ -143,7 +158,7 @@ export function App() {
             {selectedSpawnpoint.value && (
                 <div
                     class={
-                        'absolute bottom-0 right-0 m-4 flex h-full max-h-96 w-full max-w-[400px] flex-col gap-2 rounded-lg bg-stone-800/50 pt-4 backdrop-blur-sm'
+                        'absolute bottom-0 right-0 m-4 flex max-h-96 max-w-[400px] flex-col gap-2 rounded-lg bg-stone-800/50 pt-4 backdrop-blur-sm'
                     }
                 >
                     <div class={'px-4 text-sm text-stone-300'}>
