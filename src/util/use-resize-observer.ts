@@ -5,8 +5,18 @@ import { Dimensions } from '../model/common';
 
 export function useResizeObserver(
     elementRef: RefObject<HTMLElement>,
+): ReadonlySignal<Dimensions | undefined>;
+
+export function useResizeObserver(
+    elementRef: RefObject<HTMLElement>,
+    initialDimensions: Dimensions,
+): ReadonlySignal<Dimensions>;
+
+export function useResizeObserver(
+    elementRef: RefObject<HTMLElement>,
+    initialDimensions?: Dimensions,
 ): ReadonlySignal<Dimensions | undefined> {
-    const dimensions = useSignal<Dimensions | undefined>(undefined);
+    const dimensions = useSignal<Dimensions | undefined>(initialDimensions);
 
     useEffect(() => {
         if (elementRef.current == null) {

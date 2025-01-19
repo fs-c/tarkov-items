@@ -211,11 +211,16 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
         });
     });
 
-    const { viewBoxString, viewBoxScale, isPanning } = useZoomAndPan(
-        containerRef,
-        containerDimensions,
-        fittedNaturalMapDimensions,
-    );
+    const {
+        viewBoxString,
+        viewBoxScale,
+        isPanning,
+        onSvgWheel,
+        onSvgMouseDown,
+        onSvgMouseMove,
+        onSvgMouseUp,
+        onSvgMouseLeave,
+    } = useZoomAndPan(containerDimensions, fittedNaturalMapDimensions);
 
     const selectedSpawnpoint = useSignal<FrontendLooseLootSpawnpoint | undefined>(undefined);
 
@@ -237,12 +242,17 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                         width={containerDimensions.value.width}
                         height={containerDimensions.value.height}
                         viewBox={viewBoxString}
-                        // have to use onMouseUp with this isPanning hack, otherwise we would also do this when panning
-                        onMouseUp={() => {
+                        onWheel={onSvgWheel}
+                        onMouseDown={onSvgMouseDown}
+                        onMouseMove={onSvgMouseMove}
+                        onMouseUp={(event) => {
                             if (!isPanning.value) {
                                 selectedSpawnpoint.value = undefined;
                             }
+
+                            onSvgMouseUp(event);
                         }}
+                        onMouseLeave={onSvgMouseLeave}
                     >
                         <image
                             href={mapMetadata.value.svgPath}
@@ -253,7 +263,7 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                         {spawnpointsWithPosition.value.map((spawnpoint, index) => (
                             <circle
                                 class={
-                                    'fill-stone-700/80 stroke-stone-300/50 hover:fill-purple-700/80 hover:stroke-purple-300'
+                                    'cursor-pointer fill-stone-700/80 stroke-stone-300/50 hover:fill-purple-700/80 hover:stroke-purple-300'
                                 }
                                 key={index}
                                 cx={spawnpoint.svgPosition.x}
@@ -268,10 +278,10 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                     {selectedSpawnpoint.value && (
                         <div
                             class={
-                                'absolute bottom-0 right-0 m-4 flex h-full max-h-96 w-full max-w-96 flex-col gap-2 rounded-lg bg-stone-800/50 px-4 pt-4 backdrop-blur-sm'
+                                'absolute bottom-0 right-0 m-4 flex h-full max-h-96 w-full max-w-96 flex-col gap-2 rounded-lg bg-stone-800/50 pt-4 backdrop-blur-sm'
                             }
                         >
-                            <div class={'text-sm text-stone-300'}>
+                            <div class={'px-4 text-sm text-stone-300'}>
                                 <span class={'font-semibold'}>
                                     {formatProbability(selectedSpawnpoint.value.probability)}
                                 </span>{' '}
@@ -282,22 +292,31 @@ export function LootSpawnsMap({ map }: { map: ReadonlySignal<Location> }) {
                                 items
                             </div>
 
-                            <div class={'flex flex-row flex-wrap gap-2 overflow-y-scroll pb-4'}>
+                            <div class={'flex flex-row flex-wrap gap-2 overflow-y-auto px-4 pb-4'}>
                                 {selectedSpawnpoint.value.items
                                     .sort((a, b) => b.probability - a.probability)
                                     .map((item) => (
                                         <div
                                             class={
-                                                'flex flex-row items-center gap-2 rounded-md bg-stone-800/70 p-1'
+                                                'flex flex-row items-center gap-2 rounded-md bg-stone-900/70 p-1'
                                             }
                                         >
-                                            <img class={'h-8 w-8'} src={item.icon} />
+                                            <div
+                                                class={
+                                                    'overflow-hidden rounded-md border border-stone-700/50'
+                                                }
+                                            >
+                                                <img
+                                                    class={'h-8 w-8 [clip-path:inset(1px)]'}
+                                                    src={item.icon}
+                                                />
+                                            </div>
 
                                             <div class={'text-sm text-stone-300'}>
                                                 {translations.value.get(item.tpl)}
                                             </div>
 
-                                            <div class={'text-sm text-stone-300'}>
+                                            <div class={'text-sm font-semibold text-stone-300'}>
                                                 {formatProbability(item.probability)}
                                             </div>
                                         </div>

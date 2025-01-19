@@ -1,7 +1,7 @@
 import { Location } from '../model/location';
-import { MapMetadata } from '../model/map-metadata';
+import { MapMetadataCollection } from '../model/map-metadata';
 
-function getLocationForMapMetadata(mapMetadata: MapMetadata): Location | undefined {
+function getLocationForMapMetadata(mapMetadata: MapMetadataCollection): Location | undefined {
     switch (mapMetadata.normalizedName) {
         case 'lighthouse':
             return Location.Lighthouse;
@@ -28,14 +28,14 @@ function getLocationForMapMetadata(mapMetadata: MapMetadata): Location | undefin
     }
 }
 
-export function fetchAllMapMetadata(): Promise<Map<Location, MapMetadata>> {
+export function fetchAllMapMetadata(): Promise<Map<Location, MapMetadataCollection>> {
     // todo: this isn't even remotely trying to be type safe
     const data = fetch('./database/map-metadata.json').then((response) =>
         response.json(),
-    ) as Promise<MapMetadata[]>;
+    ) as Promise<MapMetadataCollection[]>;
 
     return data.then((rawMapMetadata) => {
-        const mapMetadata = new Map<Location, MapMetadata>();
+        const mapMetadata = new Map<Location, MapMetadataCollection>();
 
         for (const map of rawMapMetadata) {
             const location = getLocationForMapMetadata(map);
