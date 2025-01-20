@@ -50,18 +50,30 @@ export function useZoomAndPan(
         // todo: right now this does not consider scale, would be nice if it did
         return {
             x: {
-                min: -elementDimensions.value.width / 2 + initialViewBoxPosition.value.x,
-                max: elementDimensions.value.width / 2 + initialViewBoxPosition.value.x,
+                min: Math.min(
+                    -viewBoxDimensions.value.width / 2,
+                    -viewBoxDimensions.value.width + initiallyCentered.value.width / 2,
+                ),
+                max: Math.max(
+                    initiallyCentered.value.width - viewBoxDimensions.value.width / 2,
+                    initiallyCentered.value.width / 2,
+                ),
             },
             y: {
-                min: -elementDimensions.value.height + initiallyCentered.value.height / 2,
-                max: initiallyCentered.value.height / 2,
+                min: Math.min(
+                    -viewBoxDimensions.value.height / 2,
+                    -viewBoxDimensions.value.height + initiallyCentered.value.height / 2,
+                ),
+                max: Math.max(
+                    initiallyCentered.value.height - viewBoxDimensions.value.height / 2,
+                    initiallyCentered.value.height / 2,
+                ),
             },
         };
     });
 
     const maxScale = 2;
-    const minScale = 0.05;
+    const minScale = 0.01;
 
     const onSvgWheel = (event: WheelEvent) => {
         if (!elementDimensions.value) {
@@ -83,10 +95,19 @@ export function useZoomAndPan(
         const deltaWidth = newWidth - viewBoxDimensions.value.width;
         const deltaHeight = newHeight - viewBoxDimensions.value.height;
 
+        const limits = viewBoxPositionLimits.value;
         // adjust viewBox position to keep mouse position fixed
         viewBoxPosition.value = {
-            x: viewBoxPosition.value.x - deltaWidth * relativeX,
-            y: viewBoxPosition.value.y - deltaHeight * relativeY,
+            x: bounded(
+                viewBoxPosition.value.x - deltaWidth * relativeX,
+                limits.x.min,
+                limits.x.max,
+            ),
+            y: bounded(
+                viewBoxPosition.value.y - deltaHeight * relativeY,
+                limits.y.min,
+                limits.y.max,
+            ),
         };
 
         viewBoxScale.value = newScale;
@@ -119,7 +140,6 @@ export function useZoomAndPan(
             (viewBoxDimensions.value.height / elementDimensions.value.height);
 
         const limits = viewBoxPositionLimits.value;
-
         viewBoxPosition.value = {
             x: bounded(viewBoxPosition.value.x + deltaX, limits.x.min, limits.x.max),
             y: bounded(viewBoxPosition.value.y + deltaY, limits.y.min, limits.y.max),
