@@ -41,3 +41,32 @@ export function mapLocationToDisplayName(location: Location): string {
             return 'Woods';
     }
 }
+
+export function mapLocationToNiceUrlName(location: Location): string {
+    switch (location) {
+        case Location.Customs:
+            return 'customs';
+        case Location.FactoryDay:
+            return 'factory';
+        case Location.FactoryNight:
+            return 'factory-night';
+        case Location.Interchange:
+            return 'interchange';
+        case Location.Labs:
+            return 'labs';
+        case Location.Lighthouse:
+            return 'lighthouse';
+        case Location.Reserve:
+            return 'reserve';
+        case Location.GroundZeroLow:
+            return 'ground-zero-low';
+        case Location.GroundZeroHigh:
+            return 'ground-zero-high';
+        case Location.Shoreline:
+            return 'shoreline';
+        case Location.Streets:
+            return 'streets';
+        case Location.Woods:
+            return 'woods';
+    }
+}
