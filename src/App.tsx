@@ -21,10 +21,11 @@ import { fetchTranslations } from './fetcher/fetch-translations';
 import { fetchLooseLootPerMap } from './fetcher/fetch-loose-loot';
 import { LooseLootSpawnpoint } from './model/loose-loot';
 import { formatProbability } from './util/display';
-import { MagnifyingGlass } from './components/lib/MagnifyingGlass';
+import { MagnifyingGlassIcon } from './components/lib/MagnifyingGlassIcon';
 import { ItemSearchDialog } from './components/ItemSearchDialog';
 import { createPortal } from 'preact/compat';
 import { ItemIcon } from './components/lib/ItemIcon';
+import { MapPinIconOutline, MapPinIconSolid } from './components/lib/MapPinIcon';
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
@@ -113,6 +114,8 @@ export function App() {
         return looseLoot.spawnpoints;
     });
 
+    const selectedItemIds = useSignal<string[]>([]);
+
     const isSearchDialogOpen = useSignal(false);
 
     useEffect(() => {
@@ -166,25 +169,59 @@ export function App() {
                     </div>
                 </div>
 
-                <button
-                    className={
-                        'flex h-[52px] w-max flex-row items-center gap-3 rounded-xl px-4 py-2 backdrop-blur-sm hover:bg-stone-300/10 md:bg-stone-800/50'
-                    }
-                    onClick={() => (isSearchDialogOpen.value = true)}
-                >
-                    <MagnifyingGlass />
+                <div className={'flex flex-col gap-4'}>
+                    <button
+                        className={
+                            'flex h-[52px] w-max flex-row items-center gap-3 rounded-xl px-4 py-2 backdrop-blur-sm hover:bg-stone-300/10 md:bg-stone-800/50'
+                        }
+                        onClick={() => (isSearchDialogOpen.value = true)}
+                    >
+                        <MagnifyingGlassIcon />
 
-                    <p className={'hidden w-max text-stone-300 md:block'}>Search spawnpoints...</p>
+                        <p className={'hidden w-max text-stone-300 md:block'}>
+                            Search spawnpoints...
+                        </p>
 
-                    <p className={'hidden w-max text-stone-300 md:block'}>
-                        <span className={'font-semibold'}>Ctrl K</span>
-                    </p>
-                </button>
+                        <p className={'hidden w-max text-stone-300 md:block'}>
+                            <span className={'font-semibold'}>Ctrl K</span>
+                        </p>
+                    </button>
+
+                    <div className={'flex flex-col items-end gap-2'}>
+                        {selectedItemIds.value.map((id) => (
+                            <button
+                                className={
+                                    'group flex flex-row items-center gap-2 rounded-md bg-stone-800/50 p-2 backdrop-blur-sm'
+                                }
+                                onClick={() =>
+                                    (selectedItemIds.value = selectedItemIds.value.filter(
+                                        (itemId) => itemId !== id,
+                                    ))
+                                }
+                            >
+                                <ItemIcon iconLink={allItemMetadata.value.get(id)?.iconLink} />
+
+                                <p className={'text-stone-300'}>{translations.value.get(id)}</p>
+
+                                <MapPinIconSolid
+                                    className={'block size-6 text-stone-400 group-hover:hidden'}
+                                />
+
+                                <MapPinIconOutline
+                                    className={'hidden size-6 text-stone-400 group-hover:block'}
+                                />
+                            </button>
+                        ))}
+                    </div>
+                </div>
             </div>
 
             {isSearchDialogOpen.value &&
                 createPortal(
-                    <ItemSearchDialog close={() => (isSearchDialogOpen.value = false)} />,
+                    <ItemSearchDialog
+                        close={() => (isSearchDialogOpen.value = false)}
+                        $selectedItemIds={selectedItemIds}
+                    />,
                     document.body,
                 )}
 
@@ -192,6 +229,7 @@ export function App() {
                 mapMetadata={mapMetadata}
                 spawnpoints={mapSpawnpoints}
                 $selectedSpawnpoint={selectedSpawnpoint}
+                selectedItemIds={selectedItemIds}
             />
 
             {selectedSpawnpoint.value && (

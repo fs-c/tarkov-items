@@ -1,13 +1,21 @@
-import { useComputed, useSignal } from '@preact/signals';
+import { Signal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { allItemMetadata } from '../store/data';
 import uFuzzy from '@leeoniya/ufuzzy';
-import { MagnifyingGlass } from './lib/MagnifyingGlass';
+import { MagnifyingGlassIcon } from './lib/MagnifyingGlassIcon';
 import { ItemIcon } from './lib/ItemIcon';
+import { twMerge as tw } from 'tailwind-merge';
+import { MapPinIconOutline, MapPinIconSolid } from './lib/MapPinIcon';
 
 const ufuzzy = new uFuzzy();
 
-export function ItemSearchDialog({ close }: { close: () => void }) {
+export function ItemSearchDialog({
+    close,
+    $selectedItemIds,
+}: {
+    close: () => void;
+    $selectedItemIds: Signal<string[]>;
+}) {
     const searchInput = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -48,10 +56,74 @@ export function ItemSearchDialog({ close }: { close: () => void }) {
             .slice(0, 50);
     });
 
+    const currentlyHighlightedIndex = useSignal<number>(0);
+
+    const currentlyHighlightedId = useComputed(() => {
+        if (currentlyHighlightedIndex.value == null) {
+            return undefined;
+        }
+
+        return searchResults.value[currentlyHighlightedIndex.value]?.id;
+    });
+
+    const onSelectItem = (idToSelect: string) => {
+        if ($selectedItemIds.value.includes(idToSelect)) {
+            $selectedItemIds.value = $selectedItemIds.value.filter((id) => id !== idToSelect);
+        } else {
+            $selectedItemIds.value = [...$selectedItemIds.value, idToSelect];
+        }
+    };
+
+    const scrollElementIntoView = (id: string | undefined) => {
+        if (id == null) {
+            return;
+        }
+
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    };
+
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             if (event.key === 'Escape') {
                 close();
+            }
+
+            if (event.key === 'ArrowDown') {
+                if (currentlyHighlightedIndex.value == null) {
+                    currentlyHighlightedIndex.value = 0;
+                } else {
+                    currentlyHighlightedIndex.value =
+                        (currentlyHighlightedIndex.value + 1) % searchResults.value.length;
+                }
+
+                scrollElementIntoView(currentlyHighlightedId.value);
+            }
+
+            if (event.key === 'ArrowUp') {
+                if (currentlyHighlightedIndex.value == null) {
+                    currentlyHighlightedIndex.value = searchResults.value.length - 1;
+                } else {
+                    currentlyHighlightedIndex.value =
+                        (currentlyHighlightedIndex.value - 1 + searchResults.value.length) %
+                        searchResults.value.length;
+                }
+
+                scrollElementIntoView(currentlyHighlightedId.value);
+            }
+
+            if (event.key === 'Enter') {
+                if (currentlyHighlightedId.value == null) {
+                    return;
+                }
+
+                onSelectItem(currentlyHighlightedId.value);
+
+                if (searchResults.value.length === 1) {
+                    close();
+                }
             }
         };
 
@@ -61,6 +133,16 @@ export function ItemSearchDialog({ close }: { close: () => void }) {
             window.removeEventListener('keydown', handleKeyDown);
         };
     }, []);
+
+    const itemsToShow = useComputed(() => {
+        if (searchResults.value.length === 0) {
+            return $selectedItemIds.value
+                .map((id) => allItemMetadata.value.get(id))
+                .filter((item) => item != null);
+        }
+
+        return searchResults.value;
+    });
 
     return (
         <div
@@ -77,8 +159,8 @@ export function ItemSearchDialog({ close }: { close: () => void }) {
                 }
                 onClick={(event) => event.stopPropagation()}
             >
-                <header className={'flex flex-row items-center gap-4 p-4'}>
-                    <MagnifyingGlass className={'size-6'} />
+                <header className={'flex flex-row items-center gap-4 px-6 py-4'}>
+                    <MagnifyingGlassIcon className={'size-6'} />
 
                     <input
                         className={'w-full bg-transparent text-stone-300 outline-none'}
@@ -103,20 +185,33 @@ export function ItemSearchDialog({ close }: { close: () => void }) {
                         'flex max-h-96 flex-col gap-2 overflow-y-auto bg-stone-800/50 p-4 backdrop-blur-sm'
                     }
                 >
-                    {searchResults.value.length === 0 && (
+                    {itemsToShow.value.length === 0 && (
                         <div className={'text-stone-400'}>No results</div>
                     )}
 
-                    {searchResults.value.map((item) => (
-                        <div
-                            className={
-                                'flex flex-row items-center gap-2 rounded-md bg-stone-900/70 p-2'
-                            }
+                    {itemsToShow.value.map((item, index) => (
+                        <button
+                            key={item.id}
+                            id={item.id}
+                            className={tw(
+                                'flex flex-row items-center gap-4 rounded-md border border-transparent bg-stone-800/70 p-2 pr-3 aria-selected:border-stone-500',
+                            )}
+                            onClick={() => onSelectItem(item.id)}
+                            aria-selected={index === currentlyHighlightedIndex.value}
+                            onMouseEnter={() => {
+                                currentlyHighlightedIndex.value = index;
+                            }}
                         >
                             <ItemIcon iconLink={item.iconLink} />
 
-                            <span>{item.shortName}</span>
-                        </div>
+                            <p className={'flex-grow text-start'}>{item.shortName}</p>
+
+                            {$selectedItemIds.value.includes(item.id) ? (
+                                <MapPinIconSolid className={'size-6 text-stone-400'} />
+                            ) : (
+                                <MapPinIconOutline className={'size-6 text-stone-400'} />
+                            )}
+                        </button>
                     ))}
                 </div>
             </div>

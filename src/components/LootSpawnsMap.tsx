@@ -1,5 +1,5 @@
-import { ReadonlySignal, Signal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
-import { allItemMetadata, allMapMetadata, looseLootPerMap, translations } from '../store/data';
+import { ReadonlySignal, Signal, useComputed } from '@preact/signals';
+import { allItemMetadata } from '../store/data';
 import { useRef } from 'preact/hooks';
 import { useResizeObserver } from '../util/use-resize-observer';
 import { LoadingSpinner } from './lib/LoadingSpinner';
@@ -7,11 +7,13 @@ import { Dimensions, Point } from '../model/common';
 import { useZoomAndPan } from '../util/use-zoom-and-pan';
 import { LooseLootItem, LooseLootSpawnpoint } from '../model/loose-loot';
 import { MapMetadata } from '../model/map-metadata';
+import { twMerge as tw } from 'tailwind-merge';
 
 interface FrontendLooseLootSpawnpoint extends LooseLootSpawnpoint {
     items: (LooseLootItem & {
         icon: string;
     })[];
+    highlighted: boolean;
     svgPosition: Point;
 }
 
@@ -91,10 +93,12 @@ export function LootSpawnsMap({
     mapMetadata,
     spawnpoints,
     $selectedSpawnpoint,
+    selectedItemIds,
 }: {
     mapMetadata: ReadonlySignal<MapMetadata | undefined>;
     spawnpoints: ReadonlySignal<LooseLootSpawnpoint[]>;
     $selectedSpawnpoint: Signal<LooseLootSpawnpoint | undefined>;
+    selectedItemIds: ReadonlySignal<string[]>;
 }) {
     const containerRef = useRef<HTMLDivElement>(null);
     const containerDimensions = useResizeObserver(containerRef);
@@ -189,6 +193,9 @@ export function LootSpawnsMap({
 
             return {
                 ...spawnpoint,
+                highlighted: spawnpoint.items.some((item) =>
+                    selectedItemIds.value.includes(item.tpl),
+                ),
                 items: spawnpoint.items.map((item) => ({
                     ...item,
                     icon: allItemMetadata.value.get(item.tpl)?.iconLink ?? '',
@@ -252,14 +259,16 @@ export function LootSpawnsMap({
 
                         {spawnpointsWithPosition.value.map((spawnpoint, index) => (
                             <circle
-                                class={
-                                    'cursor-pointer fill-stone-700/80 stroke-stone-300/50 hover:fill-purple-700/80 hover:stroke-purple-300'
-                                }
+                                class={tw(
+                                    'cursor-pointer fill-stone-700/80 stroke-stone-300/50 hover:fill-purple-700/80 hover:stroke-purple-300',
+                                    spawnpoint.highlighted &&
+                                        'fill-yellow-600/80 stroke-yellow-300',
+                                )}
                                 key={index}
                                 cx={spawnpoint.svgPosition.x}
                                 cy={spawnpoint.svgPosition.y}
-                                r={3 * viewBoxScale.value}
-                                stroke-width={1 * viewBoxScale.value}
+                                r={0.01 + viewBoxScale.value * (spawnpoint.highlighted ? 6 : 4)}
+                                stroke-width={viewBoxScale.value}
                                 onClick={(event) => onSpawnpointClick(event, spawnpoint)}
                             />
                         ))}
