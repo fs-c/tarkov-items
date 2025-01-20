@@ -1,4 +1,4 @@
-import { useMemo } from 'preact/hooks';
+import { useEffect, useMemo } from 'preact/hooks';
 import {
     fetchContainerContentPerMap,
     fetchStaticSpawnsPerMap,
@@ -22,6 +22,9 @@ import { fetchLooseLootPerMap } from './fetcher/fetch-loose-loot';
 import { LooseLootSpawnpoint } from './model/loose-loot';
 import { formatProbability } from './util/display';
 import { MagnifyingGlass } from './components/lib/MagnifyingGlass';
+import { ItemSearchDialog } from './components/ItemSearchDialog';
+import { createPortal } from 'preact/compat';
+import { ItemIcon } from './components/lib/ItemIcon';
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
@@ -110,44 +113,80 @@ export function App() {
         return looseLoot.spawnpoints;
     });
 
+    const isSearchDialogOpen = useSignal(false);
+
+    useEffect(() => {
+        const handleKeyDown = (event: KeyboardEvent) => {
+            // ctrl+k is used by browsers as well so this is a bad practice, but it's very common so people expect it
+            if (event.key === 'k' && event.ctrlKey) {
+                isSearchDialogOpen.value = !isSearchDialogOpen.value;
+                event.preventDefault();
+            }
+        };
+
+        window.addEventListener('keydown', handleKeyDown);
+
+        return () => {
+            window.removeEventListener('keydown', handleKeyDown);
+        };
+    }, []);
+
+    const onChangeLocation = (location: Location) => {
+        selectedLocation.value = location;
+        selectedSpawnpoint.value = undefined;
+    };
+
     return (
         <div className={'relative h-screen w-screen bg-stone-900'}>
-            <div className={'absolute z-10 flex w-full flex-row justify-between gap-8 text-sm'}>
+            <div
+                className={
+                    'absolute top-4 z-10 flex w-full flex-row justify-between gap-4 px-4 text-sm'
+                }
+            >
                 <div
                     className={
-                        'm-4 flex h-[52px] w-max flex-row gap-2 rounded-xl bg-stone-800/50 p-2 backdrop-blur-sm'
+                        'flex h-[52px] overflow-x-auto rounded-xl bg-stone-800/50 backdrop-blur-sm'
                     }
                 >
-                    {availableLocations.map((location) => (
-                        <button
-                            key={location}
-                            onClick={() => (selectedLocation.value = location)}
-                            className={tw(
-                                'rounded-lg px-4 py-2 font-semibold text-stone-300',
-                                selectedLocation.value === location
-                                    ? 'bg-stone-300 text-stone-800'
-                                    : 'hover:bg-stone-300/10',
-                            )}
-                        >
-                            {mapLocationToDisplayName(location)}
-                        </button>
-                    ))}
+                    <div className={'flex flex-row gap-2 p-2'}>
+                        {availableLocations.map((location) => (
+                            <button
+                                key={location}
+                                onClick={() => onChangeLocation(location)}
+                                className={tw(
+                                    'w-max rounded-lg px-4 py-2 font-semibold text-stone-300',
+                                    selectedLocation.value === location
+                                        ? 'bg-stone-300 text-stone-800'
+                                        : 'hover:bg-stone-300/10',
+                                )}
+                            >
+                                {mapLocationToDisplayName(location)}
+                            </button>
+                        ))}
+                    </div>
                 </div>
 
                 <button
                     className={
-                        'm-4 flex h-[52px] flex-row items-center gap-3 rounded-xl bg-stone-800/50 px-4 py-2 backdrop-blur-sm hover:bg-stone-300/10'
+                        'flex h-[52px] w-max flex-row items-center gap-3 rounded-xl px-4 py-2 backdrop-blur-sm hover:bg-stone-300/10 md:bg-stone-800/50'
                     }
+                    onClick={() => (isSearchDialogOpen.value = true)}
                 >
                     <MagnifyingGlass />
 
-                    <p className={'text-stone-300'}>Search spawnpoints...</p>
+                    <p className={'hidden w-max text-stone-300 md:block'}>Search spawnpoints...</p>
 
-                    <p className={'text-stone-300'}>
+                    <p className={'hidden w-max text-stone-300 md:block'}>
                         <span className={'font-semibold'}>Ctrl K</span>
                     </p>
                 </button>
             </div>
+
+            {isSearchDialogOpen.value &&
+                createPortal(
+                    <ItemSearchDialog close={() => (isSearchDialogOpen.value = false)} />,
+                    document.body,
+                )}
 
             <LootSpawnsMap
                 mapMetadata={mapMetadata}
@@ -179,16 +218,9 @@ export function App() {
                                         'flex flex-row items-center gap-2 rounded-md bg-stone-900/70 p-1 pr-2'
                                     }
                                 >
-                                    <div
-                                        class={
-                                            'overflow-hidden rounded-md border border-stone-700/50'
-                                        }
-                                    >
-                                        <img
-                                            class={'h-8 w-8 [clip-path:inset(1px)]'}
-                                            src={allItemMetadata.value.get(item.tpl)?.iconLink}
-                                        />
-                                    </div>
+                                    <ItemIcon
+                                        iconLink={allItemMetadata.value.get(item.tpl)?.iconLink}
+                                    />
 
                                     <div class={'text-sm text-stone-300'}>
                                         {translations.value.get(item.tpl)}

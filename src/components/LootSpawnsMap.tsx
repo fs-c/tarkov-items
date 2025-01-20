@@ -5,8 +5,7 @@ import { useResizeObserver } from '../util/use-resize-observer';
 import { LoadingSpinner } from './lib/LoadingSpinner';
 import { Dimensions, Point } from '../model/common';
 import { useZoomAndPan } from '../util/use-zoom-and-pan';
-import { LooseLoot, LooseLootItem, LooseLootSpawnpoint } from '../model/loose-loot';
-import { formatProbability } from '../util/display';
+import { LooseLootItem, LooseLootSpawnpoint } from '../model/loose-loot';
 import { MapMetadata } from '../model/map-metadata';
 
 interface FrontendLooseLootSpawnpoint extends LooseLootSpawnpoint {

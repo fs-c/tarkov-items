@@ -32,6 +32,8 @@ export function useZoomAndPan(
     // todo: this is dubious
     useSignalEffect(() => {
         viewBoxPosition.value = initialViewBoxPosition.value;
+
+        viewBoxScale.value = 1;
     });
 
     const viewBoxScale = useSignal(1);

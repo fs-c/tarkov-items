@@ -7,5 +7,5 @@ export default {
             sans: ['Inter var'],
         },
     },
-    plugins: [require('@tailwindcss/forms')],
+    plugins: [require('@tailwindcss/forms')({ strategy: 'class' })],
 };
