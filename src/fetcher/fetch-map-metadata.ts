@@ -1,44 +1,46 @@
-import { Location } from '../model/location';
+import { DisplayLocation } from '../model/location';
 import { MapMetadataCollection } from '../model/map-metadata';
 
-function getLocationForMapMetadata(mapMetadata: MapMetadataCollection): Location | undefined {
+function getDisplayLocationForMapMetadata(
+    mapMetadata: MapMetadataCollection,
+): DisplayLocation | undefined {
     switch (mapMetadata.normalizedName) {
         case 'lighthouse':
-            return Location.Lighthouse;
+            return DisplayLocation.Lighthouse;
         case 'shoreline':
-            return Location.Shoreline;
+            return DisplayLocation.Shoreline;
         case 'interchange':
-            return Location.Interchange;
+            return DisplayLocation.Interchange;
         case 'reserve':
-            return Location.Reserve;
+            return DisplayLocation.Reserve;
         case 'woods':
-            return Location.Woods;
+            return DisplayLocation.Woods;
         case 'customs':
-            return Location.Customs;
+            return DisplayLocation.Customs;
         case 'factory':
-            return Location.FactoryDay;
+            return DisplayLocation.Factory;
         case 'the-lab':
-            return Location.Labs;
+            return DisplayLocation.Labs;
         case 'streets-of-tarkov':
-            return Location.Streets;
+            return DisplayLocation.Streets;
         case 'ground-zero':
-            return Location.GroundZeroHigh;
+            return DisplayLocation.GroundZero;
         default:
             return undefined;
     }
 }
 
-export function fetchAllMapMetadata(): Promise<Map<Location, MapMetadataCollection>> {
+export function fetchAllMapMetadata(): Promise<Map<DisplayLocation, MapMetadataCollection>> {
     // todo: this isn't even remotely trying to be type safe
     const data = fetch('./database/map-metadata.json').then((response) =>
         response.json(),
     ) as Promise<MapMetadataCollection[]>;
 
     return data.then((rawMapMetadata) => {
-        const mapMetadata = new Map<Location, MapMetadataCollection>();
+        const mapMetadata = new Map<DisplayLocation, MapMetadataCollection>();
 
         for (const map of rawMapMetadata) {
-            const location = getLocationForMapMetadata(map);
+            const location = getDisplayLocationForMapMetadata(map);
             if (location) {
                 mapMetadata.set(location, map);
             } else {
