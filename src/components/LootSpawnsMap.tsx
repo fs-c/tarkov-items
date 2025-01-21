@@ -260,9 +260,9 @@ export function LootSpawnsMap({
                         {spawnpointsWithPosition.value.map((spawnpoint, index) => (
                             <circle
                                 class={tw(
-                                    'cursor-pointer fill-stone-700/80 stroke-stone-300/50 hover:fill-purple-700/80 hover:stroke-purple-300',
+                                    'cursor-pointer fill-stone-700/80 stroke-stone-300/50 hover:fill-stone-500/80',
                                     spawnpoint.highlighted &&
-                                        'fill-yellow-600/80 stroke-yellow-300',
+                                        'fill-yellow-600/80 stroke-yellow-300 hover:fill-yellow-500',
                                 )}
                                 key={index}
                                 cx={spawnpoint.svgPosition.x}
