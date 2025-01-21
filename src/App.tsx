@@ -27,6 +27,12 @@ import { createPortal } from 'preact/compat';
 import { ItemIcon } from './components/lib/ItemIcon';
 import { MapPinIconOutline, MapPinIconSolid } from './components/lib/MapPinIcon';
 
+// todo: add support for layers
+// todo: figure out what's going on with labs and ground zero
+// todo: improve search dialog responsiveness
+// todo: add attribution (tarkov.dev & spt for data, and dynamic from map metadata) and github link
+// todo: investigate performance issues/limit the amount of shown spawnpoints (7k pos calculations is too much)
+
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
     return fn().then((result) => {
@@ -121,7 +127,7 @@ export function App() {
     useEffect(() => {
         const handleKeyDown = (event: KeyboardEvent) => {
             // ctrl+k is used by browsers as well so this is a bad practice, but it's very common so people expect it
-            if (event.key === 'k' && event.ctrlKey) {
+            if (event.key === 'k' && (event.ctrlKey || event.metaKey)) {
                 isSearchDialogOpen.value = !isSearchDialogOpen.value;
                 event.preventDefault();
             }
@@ -143,7 +149,7 @@ export function App() {
         <div className={'relative h-screen w-screen bg-stone-900'}>
             <div
                 className={
-                    'absolute top-4 z-10 flex w-full flex-row justify-between gap-4 px-4 text-sm'
+                    'absolute top-4 z-10 flex w-full select-none flex-row justify-between gap-4 px-4 text-sm'
                 }
             >
                 <div
@@ -172,19 +178,25 @@ export function App() {
                 <div className={'flex flex-col gap-4'}>
                     <button
                         className={
-                            'flex h-[52px] w-max flex-row items-center gap-3 rounded-xl px-4 py-2 backdrop-blur-sm hover:bg-stone-300/10 md:bg-stone-800/50'
+                            'h-[52px] w-max rounded-xl p-2 backdrop-blur-sm md:bg-stone-800/50'
                         }
                         onClick={() => (isSearchDialogOpen.value = true)}
                     >
-                        <MagnifyingGlassIcon />
+                        <div
+                            className={
+                                'flex h-full w-max flex-row items-center gap-3 rounded-xl pl-2 pr-3 md:hover:bg-stone-300/10'
+                            }
+                        >
+                            <MagnifyingGlassIcon className={'size-5'} />
 
-                        <p className={'hidden w-max text-stone-300 md:block'}>
-                            Search spawnpoints...
-                        </p>
+                            <p className={'hidden w-max font-semibold text-stone-300 md:block'}>
+                                Search items...
+                            </p>
 
-                        <p className={'hidden w-max text-stone-300 md:block'}>
-                            <span className={'font-semibold'}>Ctrl K</span>
-                        </p>
+                            <p className={'hidden w-max text-stone-300 md:block'}>
+                                <span className={'monospace'}>Ctrl K</span>
+                            </p>
+                        </div>
                     </button>
 
                     <div className={'flex flex-col items-end gap-2'}>
