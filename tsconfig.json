@@ -8,6 +8,7 @@
         "checkJs": true,
         "strict": true,
         "exactOptionalPropertyTypes": true,
+        "noUncheckedIndexedAccess": true,
 
         /* Preact Config */
         "jsx": "react-jsx",

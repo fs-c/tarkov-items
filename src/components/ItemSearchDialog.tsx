@@ -38,12 +38,15 @@ export function ItemSearchDialog({
 
     const searchResults = useComputed(() => {
         const [allItemNames, allItemIds] = allItemNamesAndIds.value;
+        if (allItemNames == null || allItemIds == null) {
+            return [];
+        }
 
         const [ids, _, order] = ufuzzy.search(allItemNames, searchString.value);
 
         let allItemIndices: number[] = [];
         if (order) {
-            allItemIndices = order.map((idx) => ids[idx]);
+            allItemIndices = order.map((idx) => ids[idx]).filter((idx) => idx != null);
         } else if (ids) {
             allItemIndices = ids;
         } else {
@@ -51,7 +54,7 @@ export function ItemSearchDialog({
         }
 
         return allItemIndices
-            .map((id) => allItemMetadata.value.get(allItemIds[id]))
+            .map((id) => allItemMetadata.value.get(allItemIds[id]!))
             .filter((item) => item != null)
             .slice(0, 50);
     });

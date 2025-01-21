@@ -13,32 +13,45 @@ export enum Location {
     Woods = 'woods',
 }
 
-export function mapLocationToDisplayName(location: Location): string {
+export enum DisplayLocation {
+    Customs,
+    Factory,
+    Interchange,
+    Labs,
+    Lighthouse,
+    Reserve,
+    GroundZero,
+    Shoreline,
+    Streets,
+    Woods,
+}
+
+export function mapLocationToDisplayLocation(location: Location): DisplayLocation {
     switch (location) {
         case Location.Customs:
-            return 'Customs';
+            return DisplayLocation.Customs;
         case Location.FactoryDay:
-            return 'Factory';
+            return DisplayLocation.Factory;
         case Location.FactoryNight:
-            return 'Factory (Night)';
+            return DisplayLocation.Factory;
         case Location.Interchange:
-            return 'Interchange';
+            return DisplayLocation.Interchange;
         case Location.Labs:
-            return 'Labs';
+            return DisplayLocation.Labs;
         case Location.Lighthouse:
-            return 'Lighthouse';
+            return DisplayLocation.Lighthouse;
         case Location.Reserve:
-            return 'Reserve';
-        case Location.GroundZeroLow:
-            return 'Ground Zero';
+            return DisplayLocation.Reserve;
         case Location.GroundZeroHigh:
-            return 'Ground Zero (High)';
+            return DisplayLocation.GroundZero;
+        case Location.GroundZeroLow:
+            return DisplayLocation.GroundZero;
         case Location.Shoreline:
-            return 'Shoreline';
+            return DisplayLocation.Shoreline;
         case Location.Streets:
-            return 'Streets';
+            return DisplayLocation.Streets;
         case Location.Woods:
-            return 'Woods';
+            return DisplayLocation.Woods;
     }
 }
 
