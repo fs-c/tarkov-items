@@ -182,16 +182,10 @@ export function LootSpawnsMap({
         });
     });
 
-    const {
-        viewBoxString,
-        viewBoxScale,
-        isPanning,
-        onSvgWheel,
-        onSvgMouseDown,
-        onSvgMouseMove,
-        onSvgMouseUp,
-        onSvgMouseLeave,
-    } = useZoomAndPan(containerDimensions, fittedNaturalMapDimensions);
+    const { viewBoxString, viewBoxScale, isPanning, listeners } = useZoomAndPan(
+        containerDimensions,
+        fittedNaturalMapDimensions,
+    );
 
     const onSpawnpointClick = (event: MouseEvent, spawnpoint: FrontendLooseLootSpawnpoint) => {
         event.stopPropagation();
@@ -206,22 +200,29 @@ export function LootSpawnsMap({
             !fittedNaturalMapDimensions.value ? (
                 <LoadingSpinner />
             ) : (
-                <>
+                <div
+                    style={{
+                        width: containerDimensions.value.width,
+                        height: containerDimensions.value.height,
+                    }}
+                    onWheel={listeners.onWheel}
+                    onPointerDown={listeners.onPointerDown}
+                    onPointerMove={listeners.onPointerMove}
+                    onPointerUp={(event) => {
+                        if (!isPanning.value) {
+                            $selectedSpawnpoint.value = undefined;
+                        }
+
+                        listeners.onPointerUp(event);
+                    }}
+                    onPointerLeave={listeners.onPointerLeave}
+                    onPointerCancel={listeners.onPointerCancel}
+                    className={'touch-none'}
+                >
                     <svg
                         width={containerDimensions.value.width}
                         height={containerDimensions.value.height}
                         viewBox={viewBoxString}
-                        onWheel={onSvgWheel}
-                        onMouseDown={onSvgMouseDown}
-                        onMouseMove={onSvgMouseMove}
-                        onMouseUp={(event) => {
-                            if (!isPanning.value) {
-                                $selectedSpawnpoint.value = undefined;
-                            }
-
-                            onSvgMouseUp(event);
-                        }}
-                        onMouseLeave={onSvgMouseLeave}
                     >
                         <image
                             href={mapMetadata.value.svgPath}
@@ -245,7 +246,7 @@ export function LootSpawnsMap({
                             />
                         ))}
                     </svg>
-                </>
+                </div>
             )}
         </div>
     );

@@ -1,7 +1,38 @@
 import { ReadonlySignal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
-import { Dimensions } from '../model/common';
+import { Dimensions, Point } from '../model/common';
 import { throttle } from './throttle';
-import { bounded } from './math';
+import { bounded, centerBetweenPoints, distanceBetweenPoints } from './math';
+import { useMemo, useRef } from 'preact/hooks';
+
+class PointerEventCache {
+    private readonly pointerIds: number[] = [];
+    private readonly cache = new Map<number, PointerEvent>();
+
+    public add(event: PointerEvent) {
+        if (!this.cache.has(event.pointerId)) {
+            this.pointerIds.push(event.pointerId);
+        }
+
+        this.cache.set(event.pointerId, event);
+    }
+
+    public getPointerIds() {
+        return this.pointerIds;
+    }
+
+    public get(pointerId: number) {
+        return this.cache.get(pointerId);
+    }
+
+    public remove(pointerId: number) {
+        this.cache.delete(pointerId);
+
+        const pointerIdsIndex = this.pointerIds.indexOf(pointerId);
+        if (pointerIdsIndex !== -1) {
+            this.pointerIds.splice(pointerIdsIndex, 1);
+        }
+    }
+}
 
 export function useZoomAndPan(
     elementDimensions: ReadonlySignal<Dimensions | undefined>,
@@ -10,11 +41,14 @@ export function useZoomAndPan(
     viewBoxString: ReadonlySignal<string>;
     viewBoxScale: ReadonlySignal<number>;
     isPanning: ReadonlySignal<boolean>;
-    onSvgWheel: (event: WheelEvent) => void;
-    onSvgMouseDown: (event: MouseEvent) => void;
-    onSvgMouseMove: (event: MouseEvent) => void;
-    onSvgMouseUp: (event: MouseEvent) => void;
-    onSvgMouseLeave: () => void;
+    listeners: {
+        onWheel: (event: WheelEvent) => void;
+        onPointerDown: (event: PointerEvent) => void;
+        onPointerMove: (event: PointerEvent) => void;
+        onPointerUp: (event: PointerEvent) => void;
+        onPointerCancel: (event: PointerEvent) => void;
+        onPointerLeave: (event: PointerEvent) => void;
+    };
 } {
     const initialViewBoxPosition = useComputed(() => {
         if (elementDimensions.value == null || initiallyCentered.value == null) {
@@ -29,10 +63,9 @@ export function useZoomAndPan(
 
     const viewBoxPosition = useSignal({ x: 0, y: 0 });
 
-    // todo: this is dubious
+    // when initial view box changed, reset our state
     useSignalEffect(() => {
         viewBoxPosition.value = initialViewBoxPosition.value;
-
         viewBoxScale.value = 1;
     });
 
@@ -47,7 +80,6 @@ export function useZoomAndPan(
             return { x: { min: -Infinity, max: Infinity }, y: { min: -Infinity, max: Infinity } };
         }
 
-        // todo: right now this does not consider scale, would be nice if it did
         return {
             x: {
                 min: Math.min(
@@ -75,19 +107,15 @@ export function useZoomAndPan(
     const maxScale = 2;
     const minScale = 0.01;
 
-    const onSvgWheel = (event: WheelEvent) => {
+    const zoomIntoPoint = (newScale: number, point: Point) => {
         if (!elementDimensions.value) {
+            console.warn('attempted to scale without knowing element dimensions');
             return;
         }
 
-        event.preventDefault();
-
-        const scaleFactor = event.deltaY < 0 ? 1 / 1.1 : 1.1;
-        const newScale = bounded(viewBoxScale.value * scaleFactor, minScale, maxScale);
-
-        // calculate (relative) mouse position in [0, 1]
-        const relativeX = event.offsetX / elementDimensions.value.width;
-        const relativeY = event.offsetY / elementDimensions.value.height;
+        // calculate (relative) point position in [0, 1] (like u/v)
+        const relativeX = point.x / elementDimensions.value.width;
+        const relativeY = point.y / elementDimensions.value.height;
 
         // calculate how much the dimensions will change
         const newWidth = elementDimensions.value.width * newScale;
@@ -96,7 +124,7 @@ export function useZoomAndPan(
         const deltaHeight = newHeight - viewBoxDimensions.value.height;
 
         const limits = viewBoxPositionLimits.value;
-        // adjust viewBox position to keep mouse position fixed
+        // adjust viewBox position to keep point fixed relative to element
         viewBoxPosition.value = {
             x: bounded(
                 viewBoxPosition.value.x - deltaWidth * relativeX,
@@ -113,50 +141,119 @@ export function useZoomAndPan(
         viewBoxScale.value = newScale;
     };
 
+    const onWheel = (event: WheelEvent) => {
+        event.preventDefault();
+
+        const scaleFactor = event.deltaY < 0 ? 1 / 1.1 : 1.1;
+        const newScale = bounded(viewBoxScale.value * scaleFactor, minScale, maxScale);
+
+        zoomIntoPoint(newScale, { x: event.offsetX, y: event.offsetY });
+    };
+
     const mouseIsPressed = useSignal(false);
     const lastSvgPanPosition = useSignal({ x: 0, y: 0 });
 
-    const onSvgMouseDown = (event: MouseEvent) => {
+    const pointerEventCache = useMemo(() => new PointerEventCache(), []);
+
+    const onPointerDown = (event: PointerEvent) => {
         event.preventDefault();
+
+        pointerEventCache.add(event);
+
+        console.log('onPointerDown', { pointerId: event.pointerId, event });
 
         mouseIsPressed.value = true;
         lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
     };
 
     const isPanning = useSignal(false);
+    const previousPinchZoomDistance = useRef(0);
 
-    const onSvgMouseMove = (event: MouseEvent) => {
+    const onPointerMove = (event: PointerEvent) => {
         if (!mouseIsPressed.value || !elementDimensions.value) {
             return;
         }
 
-        isPanning.value = true;
+        pointerEventCache.add(event);
 
-        const deltaX =
-            (lastSvgPanPosition.value.x - event.offsetX) *
-            (viewBoxDimensions.value.width / elementDimensions.value.width);
-        const deltaY =
-            (lastSvgPanPosition.value.y - event.offsetY) *
-            (viewBoxDimensions.value.height / elementDimensions.value.height);
+        const cachedPointerIds = pointerEventCache.getPointerIds();
 
-        const limits = viewBoxPositionLimits.value;
-        viewBoxPosition.value = {
-            x: bounded(viewBoxPosition.value.x + deltaX, limits.x.min, limits.x.max),
-            y: bounded(viewBoxPosition.value.y + deltaY, limits.y.min, limits.y.max),
-        };
+        console.log('onPointerMove', {
+            pointerId: event.pointerId,
+            cachedPointerIds,
+            event,
+        });
 
-        lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
+        if (cachedPointerIds.length === 1) {
+            // we have exactly one active pointer, we are panning
+            isPanning.value = true;
+
+            const deltaX =
+                (lastSvgPanPosition.value.x - event.offsetX) *
+                (viewBoxDimensions.value.width / elementDimensions.value.width);
+            const deltaY =
+                (lastSvgPanPosition.value.y - event.offsetY) *
+                (viewBoxDimensions.value.height / elementDimensions.value.height);
+
+            const limits = viewBoxPositionLimits.value;
+            viewBoxPosition.value = {
+                x: bounded(viewBoxPosition.value.x + deltaX, limits.x.min, limits.x.max),
+                y: bounded(viewBoxPosition.value.y + deltaY, limits.y.min, limits.y.max),
+            };
+
+            lastSvgPanPosition.value = { x: event.offsetX, y: event.offsetY };
+        } else if (cachedPointerIds.length === 2) {
+            // we have two active pointers, we are pinch zooming
+            const previousEvent = pointerEventCache.get(cachedPointerIds[0]!);
+            const currentEvent = pointerEventCache.get(cachedPointerIds[1]!);
+
+            console.log({ previousEvent, currentEvent });
+
+            if (!previousEvent || !currentEvent) {
+                console.warn('cache contained null events');
+                return;
+            }
+
+            const pinchDistance = distanceBetweenPoints(
+                previousEvent.offsetX,
+                previousEvent.offsetY,
+                currentEvent.offsetX,
+                currentEvent.offsetY,
+            );
+
+            if (previousPinchZoomDistance.current > 0) {
+                const scaleFactor = pinchDistance / previousPinchZoomDistance.current;
+                const newScale = bounded(viewBoxScale.value * scaleFactor, minScale, maxScale);
+
+                const center = centerBetweenPoints(
+                    previousEvent.offsetX,
+                    previousEvent.offsetY,
+                    currentEvent.offsetX,
+                    currentEvent.offsetY,
+                );
+
+                zoomIntoPoint(newScale, center);
+            }
+
+            previousPinchZoomDistance.current = pinchDistance;
+        } else {
+            console.warn('unexpected number of active pointers', cachedPointerIds);
+        }
     };
 
-    const onSvgMouseUp = (event: MouseEvent) => {
+    const onPointerUp = (event: PointerEvent) => {
+        if (event.type === 'pointercancel') {
+            console.warn('got pointer cancel event, browser started handling the touch!');
+        }
+
         event.stopPropagation();
+
+        console.log('onPointerUp', { pointerId: event.pointerId, event });
+
+        pointerEventCache.remove(event.pointerId);
 
         mouseIsPressed.value = false;
         isPanning.value = false;
-    };
-
-    const onSvgMouseLeave = () => {
-        mouseIsPressed.value = false;
     };
 
     const viewBoxString = useComputed(
@@ -168,10 +265,13 @@ export function useZoomAndPan(
         viewBoxString,
         viewBoxScale,
         isPanning,
-        onSvgWheel: throttle(onSvgWheel, 120),
-        onSvgMouseDown: throttle(onSvgMouseDown, 120),
-        onSvgMouseMove: throttle(onSvgMouseMove, 120),
-        onSvgMouseUp: throttle(onSvgMouseUp, 120),
-        onSvgMouseLeave: throttle(onSvgMouseLeave, 120),
+        listeners: {
+            onWheel: throttle(onWheel, 120),
+            onPointerDown,
+            onPointerMove: throttle(onPointerMove, 120),
+            onPointerUp,
+            onPointerLeave: onPointerUp,
+            onPointerCancel: onPointerUp,
+        },
     };
 }
