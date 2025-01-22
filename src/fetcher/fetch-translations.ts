@@ -13,6 +13,11 @@ export async function fetchTranslations(): Promise<Translations> {
 
     for (const [key, value] of Object.entries(rawTranslations)) {
         const [tpl, type] = key.split(' ');
+        if (!tpl || !type) {
+            // have to ignore this silently; unfortunately there are a bunch of keys that don't match the expected format, but
+            // we don't need them for anything atm
+            continue;
+        }
 
         if (type === 'ShortName') {
             translations.set(tpl, value);

@@ -73,14 +73,12 @@ function mapRawLooseLootToLooseLoot(data: RawLooseLoot): LooseLoot {
 }
 
 export async function fetchLooseLootPerMap(): Promise<Map<Location, LooseLoot>> {
-    const looseLootPerMap = new Map<Location, LooseLoot>();
-
-    for (const location of Object.values(Location)) {
+    const pendingResults = Object.values(Location).map(async (location) => {
         const response = await fetch(`./database/${location}/looseLoot.json`);
         const data = await (response.json() as Promise<RawLooseLoot>);
+        return [location, mapRawLooseLootToLooseLoot(data)] as const;
+    });
 
-        looseLootPerMap.set(location, mapRawLooseLootToLooseLoot(data));
-    }
-
-    return looseLootPerMap;
+    const results = await Promise.all(pendingResults);
+    return new Map(results);
 }

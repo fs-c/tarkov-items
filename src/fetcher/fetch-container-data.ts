@@ -20,14 +20,12 @@ export async function fetchStaticSpawnsPerMap(): Promise<Map<Location, StaticSpa
 }
 
 export async function fetchContainerContentPerMap(): Promise<Map<Location, ContainerContent>> {
-    const containerContentPerMap = new Map<Location, ContainerContent>();
-
-    for (const location of Object.values(Location)) {
+    const pendingResults = Object.values(Location).map(async (location) => {
         const response = await fetch(`./database/${location}/staticLoot.json`);
         const data = await (response.json() as Promise<ContainerContent>);
+        return [location, data] as const;
+    });
 
-        containerContentPerMap.set(location, data);
-    }
-
-    return containerContentPerMap;
+    const results = await Promise.all(pendingResults);
+    return new Map(results);
 }
