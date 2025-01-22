@@ -14,16 +14,16 @@ export enum Location {
 }
 
 export enum DisplayLocation {
-    Customs,
-    Factory,
-    Interchange,
-    Labs,
-    Lighthouse,
-    Reserve,
-    GroundZero,
-    Shoreline,
-    Streets,
-    Woods,
+    Customs = 'Customs',
+    Factory = 'Factory',
+    Interchange = 'Interchange',
+    Labs = 'Labs',
+    Lighthouse = 'Lighthouse',
+    Reserve = 'Reserve',
+    GroundZero = 'Ground Zero',
+    Shoreline = 'Shoreline',
+    Streets = 'Streets',
+    Woods = 'Woods',
 }
 
 export function mapLocationToDisplayLocation(location: Location): DisplayLocation {

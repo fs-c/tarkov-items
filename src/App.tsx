@@ -14,7 +14,7 @@ import {
 import { fetchAllItemMetadata } from './fetcher/fetch-item-metadata';
 import { LootSpawnsMap } from './components/LootSpawnsMap';
 import { fetchAllMapMetadata } from './fetcher/fetch-map-metadata';
-import { useComputed, useSignal } from '@preact/signals';
+import { signal, useComputed, useSignal } from '@preact/signals';
 import { DisplayLocation, Location } from './model/location';
 import { twMerge as tw } from 'tailwind-merge';
 import { fetchTranslations } from './fetcher/fetch-translations';
@@ -26,8 +26,8 @@ import { ItemSearchDialog } from './components/ItemSearchDialog';
 import { createPortal } from 'preact/compat';
 import { ItemIcon } from './components/lib/ItemIcon';
 import { MapPinIconOutline, MapPinIconSolid } from './components/lib/MapPinIcon';
+import { MapSelectionBar } from './components/MapSelectionBar';
 
-// todo: add support for map variations (ground zero low/high, factory day/night)
 // todo: add support for layers
 // todo: add support for tile paths (for labs, maybe clarify with tarkov.dev ppl if they have plans for svg)
 // todo: improve search dialog responsiveness
@@ -82,119 +82,50 @@ function useFetchAllData() {
     }, []);
 }
 
-interface LocationWithVariation {
-    location: DisplayLocation;
-    variation: Location | undefined;
-}
+// these types suck, but it is what it is for the time being
+export type FrontendLocationWithVariation = [DisplayLocation, Location];
+export type FrontendLocationWithVariations = [DisplayLocation, [string, Location][], Location];
 
-interface LocationSelectionEntrySingle {
-    name: string;
-    location: Location;
-    enabled: boolean;
-}
-
-interface LocationSelectionEntryVariations {
-    name: string;
-    location: FakeLocationForGrouping;
-    variations: {
-        name: string;
-        location: Location;
-    }[];
-    enabled: boolean;
-}
-
-function isLocationSelectionEntryVariants(
-    entry: LocationSelectionEntry,
-): entry is LocationSelectionEntryVariations {
-    return 'variations' in entry;
-}
-
-type LocationSelectionEntry = LocationSelectionEntrySingle | LocationSelectionEntryVariations;
-
-const locationSelectionEntries: LocationSelectionEntry[] = [
-    { name: 'Lighthouse', location: Location.Lighthouse, enabled: true },
-    { name: 'Customs', location: Location.Customs, enabled: true },
-    {
-        name: 'Factory',
-        location: FakeLocationForGrouping.Factory,
-        variations: [
-            { name: 'Day', location: Location.FactoryDay },
-            { name: 'Night', location: Location.FactoryNight },
+// [displayLocation, [...variations], defaultLocation]
+const locationsWithVariations = signal<FrontendLocationWithVariations[]>([
+    [DisplayLocation.Lighthouse, [], Location.Lighthouse],
+    [DisplayLocation.Customs, [], Location.Customs],
+    [
+        DisplayLocation.Factory,
+        [
+            ['Day', Location.FactoryDay],
+            ['Night', Location.FactoryNight],
         ],
-        enabled: true,
-    },
-    { name: 'Interchange', location: Location.Interchange, enabled: true },
-    { name: 'Labs', location: Location.Labs, enabled: false },
-    { name: 'Reserve', location: Location.Reserve, enabled: true },
-    {
-        name: 'Ground Zero',
-        location: FakeLocationForGrouping.GroundZero,
-        variations: [
-            { name: 'Low', location: Location.GroundZeroLow },
-            { name: 'High', location: Location.GroundZeroHigh },
+        Location.FactoryDay,
+    ],
+    [DisplayLocation.Interchange, [], Location.Interchange],
+    [DisplayLocation.Labs, [], Location.Labs],
+    [DisplayLocation.Reserve, [], Location.Reserve],
+    [
+        DisplayLocation.GroundZero,
+        [
+            ['Low', Location.GroundZeroLow],
+            ['High', Location.GroundZeroHigh],
         ],
-        enabled: true,
-    },
-    { name: 'Shoreline', location: Location.Shoreline, enabled: true },
-    { name: 'Streets', location: Location.Streets, enabled: true },
-    { name: 'Woods', location: Location.Woods, enabled: true },
-];
-
-function getVariationForEntry(entry: LocationSelectionEntry): Location | undefined {
-    if (isLocationSelectionEntryVariants(entry)) {
-        const first = entry.variations[0];
-        if (!first) {
-            throw new Error('no variations found for location selection entry');
-        }
-
-        return first.location;
-    }
-
-    return undefined;
-}
-
-function getDefaultLocationWithVariationForEntry(
-    entry: LocationSelectionEntry,
-): LocationWithVariation {
-    if (isLocationSelectionEntryVariants(entry)) {
-        const firstVariation = entry.variations[0];
-        if (!firstVariation) {
-            throw new Error('no variations found for location selection entry');
-        }
-
-        return {
-            location: entry.location,
-            variation: firstVariation.location,
-        };
-    }
-
-    return {
-        location: entry.location,
-        variation: undefined,
-    };
-}
+        Location.GroundZeroLow,
+    ],
+    [DisplayLocation.Shoreline, [], Location.Shoreline],
+    [DisplayLocation.Streets, [], Location.Streets],
+    [DisplayLocation.Woods, [], Location.Woods],
+]);
 
 export function App() {
     useFetchAllData();
 
-    const selectedLocationWithVariation = useSignal<LocationWithVariation>({
-        location: Location.Lighthouse,
-        variation: undefined,
-    });
-
-    const selectedLocation = useComputed(() => {
-        const variation = selectedLocationWithVariation.value.variation;
-        if (variation) {
-            return variation;
-        }
-
-        return selectedLocationWithVariation.value.location;
-    });
+    const selectedLocation = useSignal<FrontendLocationWithVariation>([
+        DisplayLocation.Lighthouse,
+        Location.Lighthouse,
+    ]);
 
     const selectedSpawnpoint = useSignal<LooseLootSpawnpoint | undefined>(undefined);
 
     const mapMetadata = useComputed(() => {
-        const metadata = allMapMetadata.value.get(selectedLocation.value);
+        const metadata = allMapMetadata.value.get(selectedLocation.value[0]);
         if (!metadata) {
             return undefined;
         }
@@ -204,10 +135,12 @@ export function App() {
     });
 
     const mapSpawnpoints = useComputed(() => {
-        const looseLoot = looseLootPerMap.value.get(selectedLocation.value);
+        const looseLoot = looseLootPerMap.value.get(selectedLocation.value[1]);
         if (!looseLoot) {
             return [];
         }
+
+        console.log('loose loot for', selectedLocation.value[1], looseLoot);
 
         return looseLoot.spawnpoints;
     });
@@ -232,8 +165,8 @@ export function App() {
         };
     }, []);
 
-    const onChangeLocation = (location: LocationWithVariation) => {
-        selectedLocationWithVariation.value = location;
+    const onChangeLocation = (locationWithVariation: FrontendLocationWithVariation) => {
+        selectedLocation.value = [...locationWithVariation];
         selectedSpawnpoint.value = undefined;
     };
 
@@ -244,70 +177,11 @@ export function App() {
                     'absolute top-4 z-10 flex w-full select-none flex-row justify-between gap-4 px-4 text-sm'
                 }
             >
-                <div
-                    className={
-                        'flex h-[52px] overflow-x-auto rounded-xl bg-stone-800/50 backdrop-blur-sm'
-                    }
-                >
-                    <div className={'flex flex-row gap-2 p-2'}>
-                        {locationSelectionEntries.map((entry) => (
-                            <button
-                                key={entry.location}
-                                onClick={() =>
-                                    onChangeLocation(getDefaultLocationWithVariationForEntry(entry))
-                                }
-                                className={tw(
-                                    'flex w-max flex-row gap-2 overflow-hidden rounded-lg font-semibold',
-                                    entry.location ===
-                                        selectedLocationWithVariation.value.location &&
-                                        'border border-stone-300',
-                                )}
-                            >
-                                <div
-                                    className={tw(
-                                        'px-4 py-2 text-stone-300',
-                                        entry.location ===
-                                            selectedLocationWithVariation.value.location
-                                            ? 'bg-stone-300 text-stone-800'
-                                            : 'hover:bg-stone-300/10',
-                                    )}
-                                >
-                                    {entry.name}
-                                </div>
-
-                                {isLocationSelectionEntryVariants(entry) &&
-                                    entry.location ===
-                                        selectedLocationWithVariation.value.location && (
-                                        <div
-                                            className={
-                                                'flex flex-row gap-2 py-2 pl-1 pr-2 text-stone-300'
-                                            }
-                                        >
-                                            {entry.variations.map((variation) => (
-                                                <button
-                                                    key={variation.name}
-                                                    className={tw(
-                                                        'font-normal',
-                                                        variation.location ===
-                                                            selectedLocationWithVariation.value
-                                                                .variation && 'font-semibold',
-                                                    )}
-                                                    onClick={() =>
-                                                        onChangeLocation({
-                                                            location: entry.location,
-                                                            variation: variation.location,
-                                                        })
-                                                    }
-                                                >
-                                                    {variation.name}
-                                                </button>
-                                            ))}
-                                        </div>
-                                    )}
-                            </button>
-                        ))}
-                    </div>
-                </div>
+                <MapSelectionBar
+                    locationsWithVariations={locationsWithVariations}
+                    selectedLocation={selectedLocation}
+                    onChangeLocation={onChangeLocation}
+                />
 
                 <div className={'flex flex-col gap-4'}>
                     <button
