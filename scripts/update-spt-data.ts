@@ -44,7 +44,7 @@ const getGitLfsDownloadUrl = async (oid: string, size: number): Promise<string |
             objects: { actions: { download: { href: string } } }[];
         };
 
-        return data.objects[0].actions.download.href;
+        return data.objects[0]?.actions.download.href ?? null;
     } catch {
         // just in case the response is not what we expect
         return null;
@@ -62,15 +62,12 @@ const downloadSptFile = async (
     if (responseText.startsWith('version https://git-lfs.github.com/spec/v1')) {
         const oidMatch = responseText.match(/oid sha256:(\w+)/);
         const sizeMatch = responseText.match(/size (\d+)/);
-        if (!oidMatch || !sizeMatch) {
+        if (!oidMatch || !sizeMatch || !oidMatch[1] || !sizeMatch[1]) {
             console.error(`! failed to parse git-lfs file for ${relativeOriginPath}`);
             return;
         }
 
-        const oid = oidMatch[1];
-        const size = Number(sizeMatch[1]);
-
-        const downloadUrl = await getGitLfsDownloadUrl(oid, size);
+        const downloadUrl = await getGitLfsDownloadUrl(oidMatch[1], Number(sizeMatch[1]));
         if (!downloadUrl) {
             console.error(`! failed to get download url for ${relativeOriginPath}`);
             return;

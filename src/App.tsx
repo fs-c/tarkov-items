@@ -28,11 +28,15 @@ import { ItemIcon } from './components/lib/ItemIcon';
 import { MapPinIconOutline, MapPinIconSolid } from './components/lib/MapPinIcon';
 import { MapSelectionBar } from './components/MapSelectionBar';
 
+// todo: investigate potentially incorrect spawnpoints (bug: not a single cofdm spawnpoint on labs can't be true)
+// todo: improve pinned item ui (indicate no. of spawnpoints, maybe cumulative probability, maybe allow cycling through spawnpoints?)
+// todo: optimize loading times (maybe we can precompute some stuff, or move things into a worker)
+// todo: add proper mobile support (ui & zoom/drag)
 // todo: add support for layers
-// todo: add support for tile paths (for labs, maybe clarify with tarkov.dev ppl if they have plans for svg)
+// todo: add support for tile paths (for labs)
 // todo: improve search dialog responsiveness
 // todo: add attribution (tarkov.dev & spt for data, and dynamic from map metadata) and github link
-// todo: investigate performance issues/limit the amount of shown spawnpoints (7k pos calculations is too much)
+// todo: investigate performance issues/limit the amount of shown spawnpoints (7k pos calculations is apparently too much, maybe offload to worker?)
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();
@@ -139,8 +143,6 @@ export function App() {
         if (!looseLoot) {
             return [];
         }
-
-        console.log('loose loot for', selectedLocation.value[1], looseLoot);
 
         return looseLoot.spawnpoints;
     });

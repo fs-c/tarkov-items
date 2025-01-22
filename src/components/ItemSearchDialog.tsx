@@ -103,6 +103,8 @@ export function ItemSearchDialog({
                 }
 
                 scrollElementIntoView(currentlyHighlightedId.value);
+
+                event.preventDefault();
             }
 
             if (event.key === 'ArrowUp') {
@@ -115,6 +117,8 @@ export function ItemSearchDialog({
                 }
 
                 scrollElementIntoView(currentlyHighlightedId.value);
+
+                event.preventDefault();
             }
 
             if (event.key === 'Enter') {
