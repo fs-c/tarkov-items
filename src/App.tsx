@@ -16,7 +16,6 @@ import { LootSpawnsMap } from './components/LootSpawnsMap';
 import { fetchAllMapMetadata } from './fetcher/fetch-map-metadata';
 import { signal, useComputed, useSignal } from '@preact/signals';
 import { DisplayLocation, Location } from './model/location';
-import { twMerge as tw } from 'tailwind-merge';
 import { fetchTranslations } from './fetcher/fetch-translations';
 import { fetchLooseLootPerMap } from './fetcher/fetch-loose-loot';
 import { LooseLootSpawnpoint } from './model/loose-loot';
@@ -28,15 +27,20 @@ import { ItemIcon } from './components/lib/ItemIcon';
 import { MapPinIconOutline, MapPinIconSolid } from './components/lib/MapPinIcon';
 import { MapSelectionBar } from './components/MapSelectionBar';
 
+// definition of done todos
 // todo: investigate potentially incorrect spawnpoints (bug: not a single cofdm spawnpoint on labs can't be true)
 // todo: improve pinned item ui (indicate no. of spawnpoints, maybe cumulative probability, maybe allow cycling through spawnpoints?)
+// todo: disable maps that just completely don't work
+// todo: add attribution (tarkov.dev & spt for data, and dynamic from map metadata) and github link
+// todo: investigate performance issues/limit the amount of shown spawnpoints (7k pos calculations is apparently too much, maybe offload to worker?)
+// todo: filter out event items
+
+// nice to have todos
 // todo: optimize loading times (maybe we can precompute some stuff, or move things into a worker)
 // todo: add proper mobile support (ui & zoom/drag)
 // todo: add support for layers
 // todo: add support for tile paths (for labs)
 // todo: improve search dialog responsiveness
-// todo: add attribution (tarkov.dev & spt for data, and dynamic from map metadata) and github link
-// todo: investigate performance issues/limit the amount of shown spawnpoints (7k pos calculations is apparently too much, maybe offload to worker?)
 
 function callAndLogTime<T>(fn: () => Promise<T>, name: string): Promise<T> {
     const startTime = performance.now();

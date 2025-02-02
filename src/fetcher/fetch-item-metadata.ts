@@ -10,16 +10,10 @@ export async function fetchAllItemMetadata(): Promise<Map<ItemMetadata['id'], It
             query: `{
                 items {
                     id
+                    name
                     shortName
                     iconLink
-                    width
-                    height
                     types
-                    lastLowPrice
-                    historicalPrices {
-                        price
-                        timestamp
-                    }
                 }
             }`,
         }),

@@ -222,7 +222,19 @@ export function useZoomAndPan(
             );
 
             if (previousPinchZoomDistance.current > 0) {
-                const scaleFactor = pinchDistance / previousPinchZoomDistance.current;
+                // disregard tiny changes
+                const distanceDiff = pinchDistance - previousPinchZoomDistance.current;
+                if (Math.abs(distanceDiff) < 1) {
+                    return;
+                }
+
+                const scaleFactor = previousPinchZoomDistance.current / pinchDistance;
+
+                // disregard big changes that are implausible
+                if (Math.abs(scaleFactor - 1) > 0.1) {
+                    return;
+                }
+
                 const newScale = bounded(viewBoxScale.value * scaleFactor, minScale, maxScale);
 
                 const center = centerBetweenPoints(
@@ -254,6 +266,7 @@ export function useZoomAndPan(
 
         mouseIsPressed.value = false;
         isPanning.value = false;
+        previousPinchZoomDistance.current = 0;
     };
 
     const viewBoxString = useComputed(

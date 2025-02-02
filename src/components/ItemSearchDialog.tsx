@@ -1,4 +1,4 @@
-import { Signal, useComputed, useSignal, useSignalEffect } from '@preact/signals';
+import { Signal, useComputed, useSignal } from '@preact/signals';
 import { useEffect, useRef } from 'preact/hooks';
 import { allItemMetadata } from '../store/data';
 import uFuzzy from '@leeoniya/ufuzzy';
@@ -28,7 +28,8 @@ export function ItemSearchDialog({
         const allItemNames = [];
         const allItemIds = [];
         for (const item of allItemMetadata.value.values()) {
-            allItemNames.push(item.shortName);
+            // this is terrible but it's a quick fix and it doesn't really matter
+            allItemNames.push(`${item.shortName} ${item.name}`);
             allItemIds.push(item.id);
         }
         return [allItemNames, allItemIds];
